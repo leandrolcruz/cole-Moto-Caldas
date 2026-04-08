@@ -2,7 +2,7 @@
   "name": "Inventário Q900 - Moto Caldas",
   "short_name": "Inventário Q900",
   "description": "Sistema de inventário para coletor NETUM Q900",
-  "start_url": "inventario_q900_v4.html",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0c0d12",
