@@ -1,7 +1,8 @@
-var CACHE_NAME = 'inv-q900-v4';
+var CACHE_NAME = 'inv-q900-v5';
 var urlsToCache = [
-  'inventario_q900_v4.html',
-  'manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
   'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap'
 ];
@@ -40,9 +41,9 @@ self.addEventListener('fetch', function(event) {
         }
         return fetchResponse;
       }).catch(function() {
-        // Offline fallback
-        return caches.match('inventario_q900_v4.html');
+        return caches.match('./index.html');
       });
     })
   );
 });
+
