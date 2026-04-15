@@ -1,4 +1,4 @@
-var CACHE_NAME = 'inv-q900-v5';
+var CACHE_NAME = 'inv-q900-v6';
 var urlsToCache = [
   './',
   './index.html',
@@ -41,9 +41,9 @@ self.addEventListener('fetch', function(event) {
         }
         return fetchResponse;
       }).catch(function() {
+        // Offline fallback
         return caches.match('./index.html');
       });
     })
   );
 });
-

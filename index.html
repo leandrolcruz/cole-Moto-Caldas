@@ -591,8 +591,9 @@ function saveLocBase(){localStorage.setItem(LK,JSON.stringify(locBase))}
 
 function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});document.getElementById(id).classList.add('active')}
 function goHome(){show('scrHome');renderHome()}
-function openM(id){document.getElementById(id).classList.add('show')}
-function closeM(id){document.getElementById(id).classList.remove('show')}
+var modalAberto=false;
+function openM(id){document.getElementById(id).classList.add('show');modalAberto=true}
+function closeM(id){document.getElementById(id).classList.remove('show');modalAberto=false}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
 function now(){var d=new Date();return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
 function hoje(){return new Date().toLocaleDateString('pt-BR')}
@@ -883,7 +884,7 @@ function renderDiaria(codDestaque){
 
 // Scanner diária
 var scanD=document.getElementById('scanDiaria'),timerD=null;
-scanD.addEventListener('blur',function(){if(document.getElementById('scrDiaria').classList.contains('active')){var af=document.activeElement;if(af&&af.closest('.modal'))return;setTimeout(function(){scanD.focus()},50)}});
+scanD.addEventListener('blur',function(){if(!document.getElementById('scrDiaria').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanD)))return;scanD.focus()},300)});
 scanD.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timerD){clearTimeout(timerD);timerD=null}bipeDiaria()}});
 scanD.addEventListener('input',function(){if(timerD)clearTimeout(timerD);if(scanD.value.trim().length>0)timerD=setTimeout(bipeDiaria,150)});
 
@@ -994,7 +995,7 @@ function exportarAtual(){
       }
       var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:16},{wch:30},{wch:12}];
       var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contagem');
-      XLSX.writeFile(wb,'Contagem-Livre-'+c.data.replace(/[\/:]/g,'-')+'.xlsx');toast('Relatório exportado');
+      exportarXLSX(wb,'Contagem-Livre-'+c.data.replace(/[\/:]/g,'-')+'.xlsx');
     };
   });
 }
@@ -1063,7 +1064,7 @@ function _executarExportDiaria(){
   var wsOut=XLSX.utils.json_to_sheet(dados);
   wsOut['!cols']=[{wch:16},{wch:24},{wch:14},{wch:12},{wch:18},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,wsOut,'Relatório');
-  XLSX.writeFile(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');toast('Relatório exportado');
+  exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
 }
 function _exportarDiariaFallback(){
   // Fallback sem planilha original
@@ -1088,7 +1089,7 @@ function _exportarDiariaFallback(){
   if(!dados.length){toast('Nenhum dado');return}
   var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatório');
-  XLSX.writeFile(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');toast('Relatório exportado');
+  exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
 }
 
 // ===== LOCAÇÃO: BASE =====
@@ -1293,7 +1294,7 @@ function renderLocCont(codDestaque){
 
 // Scanner locação
 var scanLC=document.getElementById('scanLoc'),timerLC=null;
-scanLC.addEventListener('blur',function(){if(document.getElementById('scrLocCont').classList.contains('active')){var af=document.activeElement;if(af&&af.closest('.modal'))return;setTimeout(function(){scanLC.focus()},50)}});
+scanLC.addEventListener('blur',function(){if(!document.getElementById('scrLocCont').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanLC)))return;scanLC.focus()},300)});
 scanLC.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timerLC){clearTimeout(timerLC);timerLC=null}bipeLoc()}});
 scanLC.addEventListener('input',function(){if(timerLC)clearTimeout(timerLC);if(scanLC.value.trim().length>0)timerLC=setTimeout(bipeLoc,150)});
 
@@ -1475,8 +1476,7 @@ function _executarExportacao(){
 
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Relatório');
-  XLSX.writeFile(wb,'Relatorio-Inventario-'+hoje()+'.xlsx');
-  toast('Relatório exportado!');
+  exportarXLSX(wb,'Relatorio-Inventario-'+hoje()+'.xlsx');
 }
 
 // ===== DESFAZER =====
@@ -1516,6 +1516,22 @@ function renderResumo(){
 
 // ===== UTIL =====
 function download(conteudo,nome){var blob=new Blob([conteudo],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Exportado: '+nome)}
+
+// Exportar XLSX com opção de compartilhar (Google Drive)
+function exportarXLSX(wb,nome){
+  var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  var file=new File([blob],nome,{type:blob.type});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:nome}).then(function(){
+      toast('Relatório compartilhado');
+    }).catch(function(e){
+      if(e.name!=='AbortError'){XLSX.writeFile(wb,nome);toast('Relatório exportado')}
+    });
+  }else{
+    XLSX.writeFile(wb,nome);toast('Relatório exportado');
+  }
+}
 
 // ===== PLANILHA ORIGINAL (IndexedDB) =====
 function abrirOrigDB(cb){
@@ -1672,6 +1688,8 @@ verDescPeca=function(cod){
     var it=db.c[cur].itens[cod];
     qtdAtual=it.qtd!==null?it.qtd:'';
     if(it.saldo!==undefined)saldoTxt='Saldo sistema: '+it.saldo;
+    if(!desc&&it.desc)desc=it.desc;
+    if(!loc&&it.loc)loc=it.loc;
   }
   function abrirModal(descFinal){
     document.getElementById('modDescCod').textContent=cod;
@@ -1698,12 +1716,17 @@ function salvarQtdManual(){
   }else{
     c.itens[cod].qtd=parseInt(v);
   }
+  // Atualizar roupaItens se modo roupa
+  if(c.modo==='roupa'&&editRoupaIdx>=0&&c.roupaItens&&c.roupaItens[editRoupaIdx]){
+    c.roupaItens[editRoupaIdx].qtd=parseInt(v);
+  }
   saveDB();closeM('modDescPeca');
   toast('✓ '+cod+' = '+v);
   // Re-renderizar tela atual
   if(c.modo==='livre')renderLivre(cod);
   else if(c.modo==='diaria')renderDiaria(cod);
   else if(c.modo==='locacao')renderLocCont(cod);
+  else if(c.modo==='roupa'){editRoupaIdx=-1;renderRoupa(cod);}
 }
 
 // ===== MÓDULO ROUPAS =====
@@ -1768,10 +1791,32 @@ function renderRoupa(codDestaque){
     var it=items[i];
     if(filtro&&it.codigo.toUpperCase().indexOf(filtro)===-1)continue;
     var flash=it.codigo===codDestaque&&i===(items.length-1)?' item-flash':'';
-    h+='<div class="item-row'+flash+'" onclick="verDescPeca(\''+it.codigo.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span></div>';
+    h+='<div class="item-row'+flash+'" onclick="verDescRoupa('+i+')" style="cursor:pointer"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span></div>';
   }
   if(!items.length)h+='<div class="empty-msg">Bipe um código para começar</div>';
   el.innerHTML=h;
+}
+
+// Descrição/edição para roupas (usa índice do roupaItens)
+var editRoupaIdx=-1;
+function verDescRoupa(idx){
+  var c=db.c[cur];if(!c||!c.roupaItens||!c.roupaItens[idx])return;
+  var it=c.roupaItens[idx];
+  editRoupaIdx=idx;
+  editCodAtual=it.codigo;
+  var desc=base[it.codigo]?base[it.codigo].desc:'';
+  if(!desc&&it.desc)desc=it.desc;
+  function abrirModal(descFinal){
+    document.getElementById('modDescCod').textContent=it.codigo+' — '+it.tamanho+' / '+it.cor;
+    document.getElementById('modDescTxt').textContent=descFinal||'Sem descrição';
+    document.getElementById('modDescLoc').textContent='';
+    document.getElementById('modDescSaldo').textContent='';
+    document.getElementById('modDescQtd').value=it.qtd;
+    openM('modDescPeca');
+    setTimeout(function(){document.getElementById('modDescQtd').focus()},200);
+  }
+  if(desc){abrirModal(desc)}
+  else{buscarCatalogo(it.codigo,function(catDesc){abrirModal(catDesc)})}
 }
 
 // Scanner roupas
@@ -1780,6 +1825,7 @@ var scanRBlocked=false;
 scanR.addEventListener('blur',function(){
   if(!document.getElementById('scrRoupa').classList.contains('active')||scanRBlocked)return;
   setTimeout(function(){
+    if(modalAberto)return;
     var af=document.activeElement;
     if(scanRBlocked||!af||af.id==='filtroRoupa'||af.closest('.modal')||af.tagName==='SELECT'||af.tagName==='INPUT'&&af!==scanR)return;
     scanR.focus();
@@ -1950,7 +1996,7 @@ function _exportarRoupasSimples(c,descs){
   if(!dados.length){toast('Nenhum dado');return}
   var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:16},{wch:30},{wch:14},{wch:10},{wch:12},{wch:12},{wch:16}];
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Roupas');
-  XLSX.writeFile(wb,'Roupas-'+c.data.replace(/[\/:]/g,'-')+'.xlsx');toast('Relatório exportado');
+  exportarXLSX(wb,'Roupas-'+c.data.replace(/[\/:]/g,'-')+'.xlsx');
 }
 
 function _exportarRoupasComparativo(contagens,descs){
@@ -1984,7 +2030,7 @@ function _exportarRoupasComparativo(contagens,descs){
   if(!dados.length){toast('Nenhum dado');return}
   var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:16},{wch:30},{wch:14},{wch:10},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Roupas');
-  XLSX.writeFile(wb,'Roupas-Comparativo-'+hoje()+'.xlsx');toast('Relatório exportado');
+  exportarXLSX(wb,'Roupas-Comparativo-'+hoje()+'.xlsx');
 }
 
 // Inicializar
