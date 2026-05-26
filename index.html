@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<title>Inventário Q900 v4 - Moto Caldas</title>
+<title>Inventário Moto Caldas</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
@@ -168,6 +168,27 @@
   .resumo-item .rl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
   .del-btn{background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;padding:4px;margin-left:8px}
   .del-btn:active{color:var(--dg)}
+
+  /* ===== LAYOUT COMPACTO — iPhone / telas pequenas ===== */
+  @media(max-width:480px){
+    .home-hero{padding:10px 0 8px}
+    .home-hero .logo{font-size:28px;margin-bottom:2px}
+    .home-hero h2{font-size:16px}
+    .home-hero p{font-size:10px;margin-top:2px}
+    .mode-cards{gap:6px;margin-top:8px}
+    .mode-card{padding:10px 14px;border-radius:10px;display:flex;align-items:center;gap:12px}
+    .mode-card .ci{font-size:22px;margin-bottom:0;flex-shrink:0}
+    .mode-card h3{font-size:14px}
+    .mode-card p{font-size:10px;margin-top:1px}
+    .mode-card .mc-text{flex:1}
+    .cat-alert{background:var(--yl-dim);border:1px solid rgba(241,196,15,.3);border-radius:var(--r);padding:10px 14px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .cat-alert .ca-info{font-size:12px;font-weight:600;color:var(--yl)}
+    .cat-alert .ca-sub{font-size:10px;color:var(--tx3)}
+    .topbar h1{font-size:14px}
+    .badge{font-size:10px;padding:2px 6px}
+    .scan-input{font-size:18px;padding:12px 14px}
+    .home-content{padding:10px 12px;padding-bottom:70px}
+  }
 </style>
 </head>
 <body>
@@ -175,21 +196,21 @@
 <!-- HOME -->
 <div class="screen active" id="scrHome">
   <div class="topbar">
-    <h1>Inventário <span>Q900</span></h1>
+    <h1>Inventário <span>Moto Caldas</span></h1>
     <span class="badge badge-gn" id="badgeTotal">0 contagens</span>
   </div>
   <div class="home-content">
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Coletor NETUM Q900</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
-      <div class="mode-card c-red" onclick="novaLivre()"><div class="ci">🔫</div><h3>Contagem Livre</h3><p>Bipe códigos livremente. Cada bipe = +1 unidade.</p></div>
-      <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><h3>Contagem Diária</h3><p>Importe a planilha de saída do Microwork. Confira saldo por localização.</p></div>
-      <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><h3>Contagem por Locação</h3><p>Importe planilha de localização. Conte por corredor, estante e prateleira.</p></div>
-      <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div>
+      <div class="mode-card c-red" onclick="novaLivre()"><div class="ci">🔫</div><div class="mc-text"><h3>Contagem Livre</h3><p>Bipe códigos livremente. Cada bipe = +1 unidade.</p></div></div>
+      <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><div class="mc-text"><h3>Contagem Diária</h3><p>Importe a planilha de saída do Microwork. Confira saldo por localização.</p></div></div>
+      <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Importe planilha de localização. Conte por corredor, estante e prateleira.</p></div></div>
+      <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><div class="mc-text"><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div></div>
     </div>
     <div id="resumoGeral"></div>
     <div id="catalogoStatus"></div>
@@ -623,16 +644,23 @@ function formatarDataXlsx(v){
   return String(v);
 }
 
+// ===== DETECÇÃO iOS =====
+var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+var SCAN_DEBOUNCE=isIOS?250:150;
+
 // ===== WEB AUDIO =====
 var audioCtx=null;
 function getAudioCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}
 document.addEventListener('touchstart',function(){getAudioCtx()},{once:true});
 document.addEventListener('click',function(){getAudioCtx()},{once:true});
 
-function somConfirmacao(){var ctx=getAudioCtx(),o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=880;g.gain.value=0.5;o.start();g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);o.stop(ctx.currentTime+0.15)}
-function somAlertaDuplo(){var ctx=getAudioCtx();[0,0.2].forEach(function(d){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='square';o.frequency.value=660;g.gain.value=0.5;o.start(ctx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.15);o.stop(ctx.currentTime+d+0.15)})}
-function somErro(){var ctx=getAudioCtx();[0,0.25,0.5].forEach(function(d){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sawtooth';o.frequency.value=200;g.gain.value=0.7;o.start(ctx.currentTime+d);o.frequency.exponentialRampToValueAtTime(100,ctx.currentTime+d+0.2);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.2);o.stop(ctx.currentTime+d+0.2)});if(navigator.vibrate)navigator.vibrate([200,100,200,100,200])}
+function somConfirmacao(){var ctx=getAudioCtx(),o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=880;g.gain.value=0.8;o.start();g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.2);o.stop(ctx.currentTime+0.2)}
+function somAlertaDuplo(){var ctx=getAudioCtx();[0,0.2].forEach(function(d){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='square';o.frequency.value=660;g.gain.value=0.8;o.start(ctx.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.15);o.stop(ctx.currentTime+d+0.15)})}
+function somErro(){var ctx=getAudioCtx();[0,0.25,0.5].forEach(function(d){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sawtooth';o.frequency.value=200;g.gain.value=1.0;o.start(ctx.currentTime+d);o.frequency.exponentialRampToValueAtTime(100,ctx.currentTime+d+0.2);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.2);o.stop(ctx.currentTime+d+0.2)});if(navigator.vibrate)navigator.vibrate([200,100,200,100,200])}
 function somAlerta(){somAlertaDuplo();if(navigator.vibrate)navigator.vibrate([150,100,150])}
+
+// ===== FOCUS HELPER (iOS-safe) =====
+function safeFocus(el){if(!el)return;if(isIOS){el.setAttribute('readonly','readonly');el.focus();setTimeout(function(){el.removeAttribute('readonly')},100)}else{el.focus()}}
 
 // Validar código
 function codInvalido(cod){return cod.indexOf('-')!==-1}
@@ -703,7 +731,7 @@ function abrirLivre(){
   document.getElementById('livreSub').textContent=c.data;
   if(document.getElementById('filtroLivre'))document.getElementById('filtroLivre').value='';
   renderLivre();
-  var inp=document.getElementById('scanLivre');inp.value='';setTimeout(function(){inp.focus()},200);
+  var inp=document.getElementById('scanLivre');inp.value='';setTimeout(function(){safeFocus(inp)},200);
 }
 function renderLivre(codDestaque){
   var c=db.c[cur];
@@ -731,24 +759,24 @@ scanL.addEventListener('blur',function(){
   setTimeout(function(){
     var af=document.activeElement;
     if(scanLBlocked||!af||af.id==='filtroLivre'||af.closest('.modal')||af.tagName==='SELECT'||af.tagName==='INPUT'&&af!==scanL)return;
-    scanL.focus();
+    safeFocus(scanL);
   },300);
 });
 // Bloquear refocus enquanto filtro estiver ativo
 var filtroEl=document.getElementById('filtroLivre');
 if(filtroEl){
   filtroEl.addEventListener('focus',function(){scanLBlocked=true});
-  filtroEl.addEventListener('blur',function(){scanLBlocked=false;setTimeout(function(){scanL.focus()},100)});
+  filtroEl.addEventListener('blur',function(){scanLBlocked=false;setTimeout(function(){safeFocus(scanL)},100)});
 }
 scanL.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timer){clearTimeout(timer);timer=null}bipeLivre()}});
-scanL.addEventListener('input',function(){if(timer)clearTimeout(timer);if(scanL.value.trim().length>0)timer=setTimeout(bipeLivre,150)});
+scanL.addEventListener('input',function(){if(timer)clearTimeout(timer);if(scanL.value.trim().length>0)timer=setTimeout(bipeLivre,SCAN_DEBOUNCE)});
 
 function bipeLivre(){
   if(cur===null)return;var c=db.c[cur];
   if(c.status==='ok'){toast('Contagem concluída');scanL.value='';return}
   var cod=scanL.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
   var fb=document.getElementById('fbLivre');
-  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanL.value='';scanL.focus();setTimeout(function(){fb.style.color=''},3000);return}
+  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanL.value='';safeFocus(scanL);setTimeout(function(){fb.style.color=''},3000);return}
   c.totalBipes++;
   if(c.itens[cod]){
     ultimoBipe={modo:'livre',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};
@@ -761,7 +789,7 @@ function bipeLivre(){
     ultimoBipe={modo:'livre',cod:cod,qtdAntes:0,era_novo:true};
     fb.textContent='★ Novo → '+cod+(loc?' ('+loc+')':'');fb.className='scan-fb fb-new';somConfirmacao();
   }
-  saveDB();renderLivre(cod);scanL.value='';scanL.focus();
+  saveDB();renderLivre(cod);scanL.value='';safeFocus(scanL);
   verificarCatalogo(cod);
 }
 
@@ -863,7 +891,7 @@ function abrirDiariaConf(){
   document.getElementById('diariaTit').textContent=c.nome;
   document.getElementById('diariaSub').textContent=(c.conferente||'')+' — '+c.data;
   renderDiaria();
-  var inp=document.getElementById('scanDiaria');inp.value='';setTimeout(function(){inp.focus()},200);
+  var inp=document.getElementById('scanDiaria');inp.value='';setTimeout(function(){safeFocus(inp)},200);
 }
 function renderDiaria(codDestaque){
   var c=db.c[cur],total=0,ok=0,pend=0;
@@ -884,31 +912,31 @@ function renderDiaria(codDestaque){
 
 // Scanner diária
 var scanD=document.getElementById('scanDiaria'),timerD=null;
-scanD.addEventListener('blur',function(){if(!document.getElementById('scrDiaria').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanD)))return;scanD.focus()},300)});
+scanD.addEventListener('blur',function(){if(!document.getElementById('scrDiaria').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanD)))return;safeFocus(scanD)},300)});
 scanD.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timerD){clearTimeout(timerD);timerD=null}bipeDiaria()}});
-scanD.addEventListener('input',function(){if(timerD)clearTimeout(timerD);if(scanD.value.trim().length>0)timerD=setTimeout(bipeDiaria,150)});
+scanD.addEventListener('input',function(){if(timerD)clearTimeout(timerD);if(scanD.value.trim().length>0)timerD=setTimeout(bipeDiaria,SCAN_DEBOUNCE)});
 
 function bipeDiaria(){
   if(cur===null)return;var c=db.c[cur];
   var cod=scanD.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
   scanD.value='';var fb=document.getElementById('fbDiaria');
-  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanD.focus();setTimeout(function(){fb.style.color=''},3000);return}
+  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanD);setTimeout(function(){fb.style.color=''},3000);return}
   c.totalBipes++;saveDB();
   if(c.itens[cod]){
     if(c.itens[cod].qtd!==null){
       ultimoBipe={modo:'diaria',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};
       c.itens[cod].qtd++;fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();
-      saveDB();renderDiaria(cod);scanD.focus();verificarCatalogo(cod);return;
+      saveDB();renderDiaria(cod);safeFocus(scanD);verificarCatalogo(cod);return;
     }
     // Primeira vez → marcar como 1
     ultimoBipe={modo:'diaria',cod:cod,qtdAntes:null,era_novo:false};
     c.itens[cod].qtd=1;
     fb.textContent='✓ '+cod+' = 1';fb.className='scan-fb fb-new';somConfirmacao();
-    saveDB();renderDiaria(cod);scanD.focus();verificarCatalogo(cod);return;
+    saveDB();renderDiaria(cod);safeFocus(scanD);verificarCatalogo(cod);return;
   }else{
     // ITEM 1: Recusar código fora da lista
     fb.textContent='✗ Código não está na lista de conferência';fb.className='scan-fb';fb.style.color='var(--dg)';
-    somErro();scanD.focus();setTimeout(function(){fb.style.color=''},3000);
+    somErro();safeFocus(scanD);setTimeout(function(){fb.style.color=''},3000);
   }
 }
 
@@ -928,7 +956,7 @@ function salvarQtdDiaria(){
   ultimoBipe={modo:'diaria',cod:codDiariaAtual,qtdAntes:c.itens[codDiariaAtual].qtd,era_novo:false};
   c.itens[codDiariaAtual].qtd=parseInt(v);
   saveDB();closeM('modQtd');renderDiaria(codDiariaAtual);
-  toast('✓ '+codDiariaAtual+' = '+v);setTimeout(function(){scanD.focus()},200);
+  toast('✓ '+codDiariaAtual+' = '+v);setTimeout(function(){safeFocus(scanD)},200);
 }
 
 // ===== ABRIR CONTAGEM EXISTENTE =====
@@ -1262,7 +1290,7 @@ function abrirContLocTela(){
   document.getElementById('locContTit').textContent='📍 '+c.locacao;
   document.getElementById('locContSub').textContent=(c.numContagem===2?'2ª':'1ª')+' contagem • '+c.conferente;
   hideLocAlerts();renderLocCont();
-  var inp=document.getElementById('scanLoc');inp.value='';setTimeout(function(){inp.focus()},200);
+  var inp=document.getElementById('scanLoc');inp.value='';setTimeout(function(){safeFocus(inp)},200);
 }
 function voltarLocSel(){saveDB();cur=null;iniciarSelLoc()}
 function hideLocAlerts(){document.getElementById('locAlertWarn').classList.remove('show');document.getElementById('locAlertErr').classList.remove('show');document.getElementById('locAlertInfo').classList.remove('show')}
@@ -1294,24 +1322,24 @@ function renderLocCont(codDestaque){
 
 // Scanner locação
 var scanLC=document.getElementById('scanLoc'),timerLC=null;
-scanLC.addEventListener('blur',function(){if(!document.getElementById('scrLocCont').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanLC)))return;scanLC.focus()},300)});
+scanLC.addEventListener('blur',function(){if(!document.getElementById('scrLocCont').classList.contains('active'))return;setTimeout(function(){if(modalAberto)return;var af=document.activeElement;if(af&&(af.closest('.modal')||af.tagName==='SELECT'||(af.tagName==='INPUT'&&af!==scanLC)))return;safeFocus(scanLC)},300)});
 scanLC.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timerLC){clearTimeout(timerLC);timerLC=null}bipeLoc()}});
-scanLC.addEventListener('input',function(){if(timerLC)clearTimeout(timerLC);if(scanLC.value.trim().length>0)timerLC=setTimeout(bipeLoc,150)});
+scanLC.addEventListener('input',function(){if(timerLC)clearTimeout(timerLC);if(scanLC.value.trim().length>0)timerLC=setTimeout(bipeLoc,SCAN_DEBOUNCE)});
 
 function bipeLoc(){
   if(cur===null)return;var c=db.c[cur];
   var cod=scanLC.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
   scanLC.value='';var fb=document.getElementById('fbLoc');
-  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Etiqueta fora do padrão');setTimeout(function(){fb.style.color=''},3000);scanLC.focus();return}
+  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Etiqueta fora do padrão');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);return}
   c.totalBipes++;saveDB();
   // 1. Peça desta locação
   if(c.itens[cod]&&!c.itens[cod].extra){
     if(c.itens[cod].qtd!==null){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao()}
     else{ultimoBipe={modo:'locacao',cod:cod,qtdAntes:null,era_novo:false};c.itens[cod].qtd=1;fb.textContent='✓ '+cod+' = 1';fb.className='scan-fb fb-new';somConfirmacao()}
-    saveDB();renderLocCont(cod);scanLC.focus();verificarCatalogo(cod);return;
+    saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return;
   }
   // 2. Extra já registrado
-  if(c.itens[cod]&&c.itens[cod].extra){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 extra → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();saveDB();renderLocCont(cod);scanLC.focus();verificarCatalogo(cod);return}
+  if(c.itens[cod]&&c.itens[cod].extra){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 extra → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return}
   // 3. Peça de OUTRA locação
   if(locBase&&locBase.pecas[cod]){
     var locCorreta=locBase.pecas[cod].loc;
@@ -1322,7 +1350,7 @@ function bipeLoc(){
     document.getElementById('modLocOutraQtd').value='1';openM('modLocOutra');return;
   }
   // 4. Não cadastrada
-  fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);scanLC.focus();
+  fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);
 }
 
 function registrarOutraLoc(){
@@ -1332,7 +1360,7 @@ function registrarOutraLoc(){
   c.ordem.push(cod);if(!c.extras)c.extras=[];c.extras.push(cod);
   ultimoBipe={modo:'locacao',cod:cod,qtdAntes:0,era_novo:true};
   saveDB();closeM('modLocOutra');hideLocAlerts();showLocAlert('info',cod+' registrado como extra (de '+c.itens[cod].loc+')');
-  renderLocCont(cod);setTimeout(function(){scanLC.focus()},200);
+  renderLocCont(cod);setTimeout(function(){safeFocus(scanLC)},200);
   verificarCatalogo(cod);
 }
 
@@ -1346,7 +1374,7 @@ function editLocQtd(cod){
 }
 function salvarLocQtd(){
   var v=document.getElementById('modLocQtdInput').value;if(v===''||isNaN(v)){toast('Digite a quantidade');return}
-  var c=db.c[cur];c.itens[tmpOutraCod].qtd=parseInt(v);saveDB();closeM('modLocQtd');renderLocCont();toast('✓ '+tmpOutraCod+' = '+v);setTimeout(function(){scanLC.focus()},200);
+  var c=db.c[cur];c.itens[tmpOutraCod].qtd=parseInt(v);saveDB();closeM('modLocQtd');renderLocCont();toast('✓ '+tmpOutraCod+' = '+v);setTimeout(function(){safeFocus(scanLC)},200);
 }
 function salvarLocCont(){saveDB();toast('Progresso salvo')}
 
@@ -1775,7 +1803,7 @@ function abrirRoupaConf(){
   document.getElementById('roupaSub').textContent=(c.numContagem===2?'2ª':'1ª')+' contagem • '+c.conferente;
   if(document.getElementById('filtroRoupa'))document.getElementById('filtroRoupa').value='';
   renderRoupa();
-  var inp=document.getElementById('scanRoupa');inp.value='';setTimeout(function(){inp.focus()},200);
+  var inp=document.getElementById('scanRoupa');inp.value='';setTimeout(function(){safeFocus(inp)},200);
 }
 
 function renderRoupa(codDestaque){
@@ -1828,23 +1856,23 @@ scanR.addEventListener('blur',function(){
     if(modalAberto)return;
     var af=document.activeElement;
     if(scanRBlocked||!af||af.id==='filtroRoupa'||af.closest('.modal')||af.tagName==='SELECT'||af.tagName==='INPUT'&&af!==scanR)return;
-    scanR.focus();
+    safeFocus(scanR);
   },300);
 });
 var filtroR=document.getElementById('filtroRoupa');
 if(filtroR){
   filtroR.addEventListener('focus',function(){scanRBlocked=true});
-  filtroR.addEventListener('blur',function(){scanRBlocked=false;setTimeout(function(){scanR.focus()},100)});
+  filtroR.addEventListener('blur',function(){scanRBlocked=false;setTimeout(function(){safeFocus(scanR)},100)});
 }
 scanR.addEventListener('keydown',function(e){if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();if(timerR){clearTimeout(timerR);timerR=null}bipeRoupa()}});
-scanR.addEventListener('input',function(){if(timerR)clearTimeout(timerR);if(scanR.value.trim().length>0)timerR=setTimeout(bipeRoupa,150)});
+scanR.addEventListener('input',function(){if(timerR)clearTimeout(timerR);if(scanR.value.trim().length>0)timerR=setTimeout(bipeRoupa,SCAN_DEBOUNCE)});
 
 function bipeRoupa(){
   if(cur===null)return;var c=db.c[cur];
   if(c.status==='ok'){toast('Contagem concluída');scanR.value='';return}
   var cod=scanR.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
   scanR.value='';var fb=document.getElementById('fbRoupa');
-  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanR.focus();setTimeout(function(){fb.style.color=''},3000);return}
+  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanR);setTimeout(function(){fb.style.color=''},3000);return}
   // Abrir modal para cor e tamanho
   roupaCodPendente=cod;
   document.getElementById('modCorTamTit').textContent=cod;
@@ -1916,7 +1944,7 @@ function confirmarCorTam(){
   c.itens[cod].qtd=(c.itens[cod].qtd||0)+1;
   if(c.ordem.indexOf(cod)===-1)c.ordem.push(cod);
   saveDB();closeM('modCorTam');renderRoupa(cod);
-  setTimeout(function(){scanR.focus()},200);
+  setTimeout(function(){safeFocus(scanR)},200);
   verificarCatalogo(cod);
 }
 
