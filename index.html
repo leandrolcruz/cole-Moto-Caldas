@@ -644,9 +644,7 @@ function formatarDataXlsx(v){
   return String(v);
 }
 
-// ===== DETECÇÃO iOS =====
-var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
-var SCAN_DEBOUNCE=isIOS?250:150;
+var SCAN_DEBOUNCE=150;
 
 // ===== WEB AUDIO =====
 var audioCtx=null;
@@ -659,19 +657,24 @@ function somAlertaDuplo(){var ctx=getAudioCtx();[0,0.2].forEach(function(d){var 
 function somErro(){var ctx=getAudioCtx();[0,0.25,0.5].forEach(function(d){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sawtooth';o.frequency.value=200;g.gain.value=1.0;o.start(ctx.currentTime+d);o.frequency.exponentialRampToValueAtTime(100,ctx.currentTime+d+0.2);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+d+0.2);o.stop(ctx.currentTime+d+0.2)});if(navigator.vibrate)navigator.vibrate([200,100,200,100,200])}
 function somAlerta(){somAlertaDuplo();if(navigator.vibrate)navigator.vibrate([150,100,150])}
 
-// ===== FOCUS HELPER (iOS-safe) =====
-function safeFocus(el){if(!el)return;if(isIOS){el.setAttribute('readonly','readonly');el.focus();setTimeout(function(){el.removeAttribute('readonly')},100)}else{el.focus()}}
+// ===== FOCUS HELPER =====
+function safeFocus(el){if(!el)return;el.focus()}
 
 // Validar código
 function codInvalido(cod){return cod.indexOf('-')!==-1}
 
 // Verificar se código existe no catálogo (134K peças)
 function verificarCatalogo(cod){
-  buscarCatalogo(cod,function(desc){
-    if(!desc){
-      // Código não encontrado no catálogo
+  buscarCatalogo(cod,function(res){
+    if(!res){
       somAlerta();
       toast('⚠ '+cod+' não encontrado no catálogo. Verifique se é um produto do estoque ou atualize o catálogo.');
+      return;
+    }
+    var r=typeof res==='string'?{desc:res,loc:''}:res;
+    if(semLocal(r.loc)){
+      somAlertaDuplo();
+      toast('⚠ '+cod+' sem localização no catálogo');
     }
   });
 }
@@ -757,8 +760,9 @@ var scanLBlocked=false;
 scanL.addEventListener('blur',function(){
   if(!document.getElementById('scrLivre').classList.contains('active')||scanLBlocked)return;
   setTimeout(function(){
+    if(scanLBlocked)return;
     var af=document.activeElement;
-    if(scanLBlocked||!af||af.id==='filtroLivre'||af.closest('.modal')||af.tagName==='SELECT'||af.tagName==='INPUT'&&af!==scanL)return;
+    if(!af||af.id==='filtroLivre'||af.closest('.modal')||af.tagName==='SELECT'||af.tagName==='INPUT'&&af!==scanL)return;
     safeFocus(scanL);
   },300);
 });
@@ -1005,23 +1009,25 @@ function exportarAtual(){
     if(!it||it.qtd===null||it.qtd===0)continue;
     codigos.push(cod);
   }
-  // Buscar descrições no catálogo IndexedDB
+  // Buscar descrições e localizações no catálogo IndexedDB
   abrirCatDB(function(db2){
-    var descs={};
+    var catInfo={};
     var tx=db2.transaction('pecas','readonly');
     var store=tx.objectStore('pecas');
     codigos.forEach(function(cod){
       var req=store.get(cod);
-      req.onsuccess=function(){if(req.result)descs[cod]=req.result};
+      req.onsuccess=function(){if(req.result){var r=typeof req.result==='string'?{desc:req.result,loc:''}:req.result;catInfo[cod]=r}};
     });
     tx.oncomplete=function(){
       var dados=[];
       for(var i=0;i<codigos.length;i++){
         var cod=codigos[i],it=c.itens[cod];
-        var desc=it.desc||descs[cod]||(base[cod]?base[cod].desc:'')||'';
-        dados.push({'Código':cod,'Descrição':desc,'Quantidade':it.qtd});
+        var ci=catInfo[cod]||{};
+        var desc=it.desc||ci.desc||(base[cod]?base[cod].desc:'')||'';
+        var loc=ci.loc||(base[cod]?base[cod].loc:'')||'';
+        dados.push({'Código':cod,'Descrição':desc,'Quantidade':it.qtd,'Localização':loc,'Sem Local':semLocal(loc)?'Sim':'Não'});
       }
-      var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:16},{wch:30},{wch:12}];
+      var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:16},{wch:30},{wch:12},{wch:14},{wch:10}];
       var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contagem');
       exportarXLSX(wb,'Contagem-Livre-'+c.data.replace(/[\/:]/g,'-')+'.xlsx');
     };
@@ -1064,35 +1070,46 @@ function _executarExportDiaria(){
       else if(!porCod[cod].c1)porCod[cod].c1={qtd:c.itens[cod].qtd,conf:c.conferente,data:c.data};
     }
   }
-  // Reconstruir com planilha original (A-E) + colunas extras (F-L)
+  // Reconstruir com planilha original (A-E) + colunas extras (F-N)
   var ws=tmpDiariaWb.Sheets[tmpDiariaWb.SheetNames[0]];
   var json=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
-  var dados=[];
-  for(var i=0;i<json.length;i++){
-    var r=json[i];
-    var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||'').trim();
-    if(!cod)continue;
-    var merc=String(r['Mercadoria']||r['Descrição']||'');
-    var loc=String(r['Local/Grade']||r['Localização']||r['Local']||'');
-    var qtdMov=r['Quantidade']||0;
-    var saldoRaw=r['Saldo Disponível Atual']||r['Saldo Disponível']||r['Saldo']||0;
-    var saldo=typeof saldoRaw==='number'?Math.round(saldoRaw):parseInt(String(saldoRaw).replace(/\./g,'').replace(',','.'))||0;
-    var info=porCod[cod];
-    var qtd1=info&&info.c1?info.c1.qtd:null;
-    var qtd2=info&&info.c2?info.c2.qtd:null;
-    var hasDiverg=(qtd1!==null&&qtd1!==saldo)||(qtd2!==null&&qtd2!==saldo)||(qtd1!==null&&qtd2!==null&&qtd1!==qtd2);
-    dados.push({
-      'Código Mercadoria':cod,'Mercadoria':merc,'Local/Grade':loc,'Quantidade':qtdMov,'Saldo Disponível Atual':saldo,
-      'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':info&&info.c1?info.c1.conf:'','Data 1ª Contagem':info&&info.c1?info.c1.data:'',
-      'Segunda contagem':qtd2!==null?qtd2:'','2 Conferente':info&&info.c2?info.c2.conf:'','Data 2ª Contagem':info&&info.c2?info.c2.data:'',
-      'Auditoria':hasDiverg?'Sim':'Não'
-    });
-  }
-  if(!dados.length){toast('Nenhum dado para exportar');return}
-  var wsOut=XLSX.utils.json_to_sheet(dados);
-  wsOut['!cols']=[{wch:16},{wch:24},{wch:14},{wch:12},{wch:18},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
-  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,wsOut,'Relatório');
-  exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
+  var codigos=[];
+  for(var i=0;i<json.length;i++){var cod=String(json[i]['Código Mercadoria']||json[i]['Codigo Mercadoria']||'').trim();if(cod)codigos.push(cod)}
+  abrirCatDB(function(db2){
+    var catInfo={};
+    var tx=db2.transaction('pecas','readonly');
+    var store=tx.objectStore('pecas');
+    codigos.forEach(function(cod){var req=store.get(cod);req.onsuccess=function(){if(req.result){var r=typeof req.result==='string'?{desc:req.result,loc:''}:req.result;catInfo[cod]=r}}});
+    tx.oncomplete=function(){
+      var dados=[];
+      for(var i=0;i<json.length;i++){
+        var r=json[i];
+        var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||'').trim();
+        if(!cod)continue;
+        var merc=String(r['Mercadoria']||r['Descrição']||'');
+        var loc=String(r['Local/Grade']||r['Localização']||r['Local']||'');
+        var qtdMov=r['Quantidade']||0;
+        var saldoRaw=r['Saldo Disponível Atual']||r['Saldo Disponível']||r['Saldo']||0;
+        var saldo=typeof saldoRaw==='number'?Math.round(saldoRaw):parseInt(String(saldoRaw).replace(/\./g,'').replace(',','.'))||0;
+        var info=porCod[cod];
+        var qtd1=info&&info.c1?info.c1.qtd:null;
+        var qtd2=info&&info.c2?info.c2.qtd:null;
+        var hasDiverg=(qtd1!==null&&qtd1!==saldo)||(qtd2!==null&&qtd2!==saldo)||(qtd1!==null&&qtd2!==null&&qtd1!==qtd2);
+        var catLoc=catInfo[cod]?catInfo[cod].loc:'';
+        dados.push({
+          'Código Mercadoria':cod,'Mercadoria':merc,'Local/Grade':loc,'Quantidade':qtdMov,'Saldo Disponível Atual':saldo,
+          'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':info&&info.c1?info.c1.conf:'','Data 1ª Contagem':info&&info.c1?info.c1.data:'',
+          'Segunda contagem':qtd2!==null?qtd2:'','2 Conferente':info&&info.c2?info.c2.conf:'','Data 2ª Contagem':info&&info.c2?info.c2.data:'',
+          'Auditoria':hasDiverg?'Sim':'Não','Localização Catálogo':catLoc,'Sem Local':semLocal(catLoc)?'Sim':'Não'
+        });
+      }
+      if(!dados.length){toast('Nenhum dado para exportar');return}
+      var wsOut=XLSX.utils.json_to_sheet(dados);
+      wsOut['!cols']=[{wch:16},{wch:24},{wch:14},{wch:12},{wch:18},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10},{wch:14},{wch:10}];
+      var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,wsOut,'Relatório');
+      exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
+    };
+  });
 }
 function _exportarDiariaFallback(){
   // Fallback sem planilha original
@@ -1105,19 +1122,29 @@ function _exportarDiariaFallback(){
       else if(!porCod[cod].c1)porCod[cod].c1={qtd:c.itens[cod].qtd,conf:c.conferente,data:c.data};
     }
   }
-  var dados=[];
-  for(var cod in porCod){
-    var p=porCod[cod];var qtd1=p.c1?p.c1.qtd:null;var qtd2=p.c2?p.c2.qtd:null;
-    var hasDiverg=(qtd1!==null&&qtd1!==p.saldo)||(qtd2!==null&&qtd2!==p.saldo)||(qtd1!==null&&qtd2!==null&&qtd1!==qtd2);
-    dados.push({'Código':cod,'Localização':p.loc,'Saldo':p.saldo,
-      'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':p.c1?p.c1.conf:'','Data 1ª':p.c1?p.c1.data:'',
-      'Segunda contagem':qtd2!==null?qtd2:'','2 Conferente':p.c2?p.c2.conf:'','Data 2ª':p.c2?p.c2.data:'',
-      'Auditoria':hasDiverg?'Sim':'Não'});
-  }
-  if(!dados.length){toast('Nenhum dado');return}
-  var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
-  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatório');
-  exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
+  var codigos=Object.keys(porCod);
+  abrirCatDB(function(db2){
+    var catInfo={};
+    var tx=db2.transaction('pecas','readonly');
+    var store=tx.objectStore('pecas');
+    codigos.forEach(function(cod){var req=store.get(cod);req.onsuccess=function(){if(req.result){var r=typeof req.result==='string'?{desc:req.result,loc:''}:req.result;catInfo[cod]=r}}});
+    tx.oncomplete=function(){
+      var dados=[];
+      for(var j=0;j<codigos.length;j++){
+        var cod=codigos[j],p=porCod[cod];var qtd1=p.c1?p.c1.qtd:null;var qtd2=p.c2?p.c2.qtd:null;
+        var hasDiverg=(qtd1!==null&&qtd1!==p.saldo)||(qtd2!==null&&qtd2!==p.saldo)||(qtd1!==null&&qtd2!==null&&qtd1!==qtd2);
+        var catLoc=catInfo[cod]?catInfo[cod].loc:'';
+        dados.push({'Código':cod,'Localização':p.loc,'Saldo':p.saldo,
+          'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':p.c1?p.c1.conf:'','Data 1ª':p.c1?p.c1.data:'',
+          'Segunda contagem':qtd2!==null?qtd2:'','2 Conferente':p.c2?p.c2.conf:'','Data 2ª':p.c2?p.c2.data:'',
+          'Auditoria':hasDiverg?'Sim':'Não','Localização Catálogo':catLoc,'Sem Local':semLocal(catLoc)?'Sim':'Não'});
+      }
+      if(!dados.length){toast('Nenhum dado');return}
+      var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10},{wch:14},{wch:10}];
+      var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatório');
+      exportarXLSX(wb,'Relatorio-Diaria-'+hoje()+'.xlsx');
+    };
+  });
 }
 
 // ===== LOCAÇÃO: BASE =====
@@ -1336,18 +1363,27 @@ function bipeLoc(){
   if(c.itens[cod]&&!c.itens[cod].extra){
     if(c.itens[cod].qtd!==null){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao()}
     else{ultimoBipe={modo:'locacao',cod:cod,qtdAntes:null,era_novo:false};c.itens[cod].qtd=1;fb.textContent='✓ '+cod+' = 1';fb.className='scan-fb fb-new';somConfirmacao()}
-    saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return;
+    saveDB();renderLocCont(cod);safeFocus(scanLC);
+    buscarCatalogo(cod,function(res){
+      if(!res)return;
+      var r=typeof res==='string'?{desc:res,loc:''}:res;
+      if(r.loc&&r.loc.toUpperCase()!==c.locacao.toUpperCase()){
+        somAlerta();showLocAlert('warn','Catálogo indica localização '+r.loc+' para '+cod);
+      }
+    });
+    return;
   }
   // 2. Extra já registrado
   if(c.itens[cod]&&c.itens[cod].extra){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 extra → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return}
-  // 3. Peça de OUTRA locação
+  // 3. Peça de OUTRA locação — registra como extra automaticamente
   if(locBase&&locBase.pecas[cod]){
-    var locCorreta=locBase.pecas[cod].loc;
-    fb.textContent='⚠ '+cod+' pertence a: '+locCorreta;fb.className='scan-fb fb-add';somAlerta();
-    showLocAlert('warn','Peça '+cod+' pertence à locação '+locCorreta);
-    tmpOutraCod=cod;document.getElementById('modLocOutraCod').textContent=cod;
-    document.getElementById('modLocOutraInfo').textContent='Locação correta: '+locCorreta+' | Saldo: '+locBase.pecas[cod].saldo;
-    document.getElementById('modLocOutraQtd').value='1';openM('modLocOutra');return;
+    var p=locBase.pecas[cod],locCorreta=p.loc;
+    c.itens[cod]={qtd:1,saldo:p.saldo||0,loc:locCorreta,extra:true,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
+    c.ordem.push(cod);if(!c.extras)c.extras=[];c.extras.push(cod);
+    ultimoBipe={modo:'locacao',cod:cod,qtdAntes:0,era_novo:true};
+    fb.textContent='⚠ '+cod+' pertence a '+locCorreta+' — extra';fb.className='scan-fb fb-add';
+    somAlerta();showLocAlert('warn','Peça '+cod+' pertence à locação '+locCorreta+' — registrada como extra');
+    saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return;
   }
   // 4. Não cadastrada
   fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);
@@ -1427,62 +1463,52 @@ function exportarTodasLocacoes(){
 }
 
 function _executarExportacao(){
-  // Indexar contagens por código
-  var porCod={};
+  // Indexar contagens por código + rastrear extras
+  var porCod={},extras={};
   for(var i=0;i<db.c.length;i++){
     var c=db.c[i];if(c.modo!=='locacao'||c.status!=='ok')continue;
     for(var cod in c.itens){
       if(!porCod[cod])porCod[cod]={c1:null,c2:null};
       if(c.numContagem===2)porCod[cod].c2={qtd:c.itens[cod].qtd,conf:c.conferente,data:c.data};
       else if(!porCod[cod].c1)porCod[cod].c1={qtd:c.itens[cod].qtd,conf:c.conferente,data:c.data};
+      if(c.itens[cod].extra)extras[cod]={loc:c.itens[cod].loc,saldo:c.itens[cod].saldo,curva:c.itens[cod].curva||'',marca:c.itens[cod].marca||'',ultEntrada:c.itens[cod].ultEntrada||'',ultSaida:c.itens[cod].ultSaida||''};
     }
   }
 
-  // Reconstruir planilha com dados originais + contagens
-  // Ler planilha original para pegar dados brutos com formatação de data
   var dados=[];
+  var codsNoExport={};
   if(tmpLocWb){
-    // Usar planilha original para manter dados fiéis
     var ws=tmpLocWb.Sheets[tmpLocWb.SheetNames[0]];
     var json=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
     for(var i=0;i<json.length;i++){
       var r=json[i];
       var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||'').trim();
       if(!cod)continue;
+      codsNoExport[cod]=true;
       var saldoRaw=r['Saldo Disponível']||r['Saldo Disponivel']||0;
       var saldo=typeof saldoRaw==='number'?saldoRaw:parseFloat(String(saldoRaw).replace(/\./g,'').replace(',','.'))||0;
       var info=porCod[cod];
       var qtd1=info&&info.c1?info.c1.qtd:null;
       var qtd2=info&&info.c2?info.c2.qtd:null;
       var hasDiverg=(qtd1!==null&&qtd1!==Math.round(saldo))||(qtd2!==null&&qtd2!==Math.round(saldo))||(qtd1!==null&&qtd2!==null&&qtd1!==qtd2);
-
-      // Converter datas de serial para texto
       var ultEnt=r['Última Entrada']||r['Ultima Entrada']||'';
       var ultSai=r['Última Saída']||r['Ultima Saida']||'';
       if(typeof ultEnt==='number')ultEnt=serialExcelParaData(ultEnt);
       if(typeof ultSai==='number')ultSai=serialExcelParaData(ultSai);
-
       dados.push({
-        'Código Mercadoria':cod,
-        'ABCD/XYZ':String(r['ABCD/XYZ']||r['Curva']||''),
-        'Localização':String(r['Localização']||r['Localizacao']||''),
-        'Saldo Disponível':Math.round(saldo),
-        'Marca':String(r['Marca']||''),
-        'Última Entrada':ultEnt,
-        'Última Saída':ultSai,
-        'Primeira contagem':qtd1!==null?qtd1:'',
-        '1 Conferente':info&&info.c1?info.c1.conf:'',
-        'Data 1ª Contagem':info&&info.c1?info.c1.data:'',
-        'Segunda contagem':qtd2!==null?qtd2:'',
-        '2 Conferente':info&&info.c2?info.c2.conf:'',
-        'Data 2ª Contagem':info&&info.c2?info.c2.data:'',
-        'Auditoria':hasDiverg?'Sim':'Não'
+        'Código Mercadoria':cod,'ABCD/XYZ':String(r['ABCD/XYZ']||r['Curva']||''),
+        'Localização':String(r['Localização']||r['Localizacao']||''),'Saldo Disponível':Math.round(saldo),
+        'Marca':String(r['Marca']||''),'Última Entrada':ultEnt,'Última Saída':ultSai,
+        'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':info&&info.c1?info.c1.conf:'',
+        'Data 1ª Contagem':info&&info.c1?info.c1.data:'','Segunda contagem':qtd2!==null?qtd2:'',
+        '2 Conferente':info&&info.c2?info.c2.conf:'','Data 2ª Contagem':info&&info.c2?info.c2.data:'',
+        'Auditoria':hasDiverg?'Sim':'Não','Pertence à Locação':'Sim'
       });
     }
   }else{
-    // Fallback: usar locBase
     for(var cod in locBase.pecas){
       var p=locBase.pecas[cod];
+      codsNoExport[cod]=true;
       var info=porCod[cod];
       var qtd1=info&&info.c1?info.c1.qtd:null;
       var qtd2=info&&info.c2?info.c2.qtd:null;
@@ -1493,17 +1519,32 @@ function _executarExportacao(){
         'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':info&&info.c1?info.c1.conf:'',
         'Data 1ª Contagem':info&&info.c1?info.c1.data:'','Segunda contagem':qtd2!==null?qtd2:'',
         '2 Conferente':info&&info.c2?info.c2.conf:'','Data 2ª Contagem':info&&info.c2?info.c2.data:'',
-        'Auditoria':hasDiverg?'Sim':'Não'
+        'Auditoria':hasDiverg?'Sim':'Não','Pertence à Locação':'Sim'
       });
     }
   }
+  // Adicionar extras (peças de outras locações)
+  for(var cod in extras){
+    if(codsNoExport[cod])continue;
+    var ex=extras[cod],info=porCod[cod];
+    var qtd1=info&&info.c1?info.c1.qtd:null;
+    var qtd2=info&&info.c2?info.c2.qtd:null;
+    dados.push({
+      'Código Mercadoria':cod,'ABCD/XYZ':ex.curva,'Localização':ex.loc,'Saldo Disponível':ex.saldo,
+      'Marca':ex.marca,'Última Entrada':ex.ultEntrada,'Última Saída':ex.ultSaida,
+      'Primeira contagem':qtd1!==null?qtd1:'','1 Conferente':info&&info.c1?info.c1.conf:'',
+      'Data 1ª Contagem':info&&info.c1?info.c1.data:'','Segunda contagem':qtd2!==null?qtd2:'',
+      '2 Conferente':info&&info.c2?info.c2.conf:'','Data 2ª Contagem':info&&info.c2?info.c2.data:'',
+      'Auditoria':'Sim','Pertence à Locação':'Não ('+ex.loc+')'
+    });
+  }
   if(!dados.length){toast('Nenhum dado para exportar');return}
 
-  var ws=XLSX.utils.json_to_sheet(dados);
-  ws['!cols']=[{wch:16},{wch:8},{wch:14},{wch:14},{wch:10},{wch:16},{wch:16},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10}];
+  var wsOut=XLSX.utils.json_to_sheet(dados);
+  wsOut['!cols']=[{wch:16},{wch:8},{wch:14},{wch:14},{wch:10},{wch:16},{wch:16},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:16},{wch:10},{wch:18}];
 
   var wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Relatório');
+  XLSX.utils.book_append_sheet(wb,wsOut,'Relatório');
   exportarXLSX(wb,'Relatorio-Inventario-'+hoje()+'.xlsx');
 }
 
@@ -1605,10 +1646,12 @@ function carregarBytesDiaria(cb){
 // ===== CATÁLOGO DE PEÇAS (IndexedDB) =====
 var catDB=null,catCount=0;
 
+function semLocal(loc){var l=(loc||'').trim();return !l||l==='[]'||l==='[SEM LOCAL]'}
+
 function abrirCatDB(cb){
   if(catDB){cb(catDB);return}
-  var req=indexedDB.open('inv_q900_catalogo',1);
-  req.onupgradeneeded=function(e){var db2=e.target.result;if(!db2.objectStoreNames.contains('pecas'))db2.createObjectStore('pecas')};
+  var req=indexedDB.open('inv_q900_catalogo',2);
+  req.onupgradeneeded=function(e){var db2=e.target.result;if(db2.objectStoreNames.contains('pecas'))db2.deleteObjectStore('pecas');db2.createObjectStore('pecas')};
   req.onsuccess=function(e){catDB=e.target.result;cb(catDB)};
   req.onerror=function(){toast('Erro ao abrir catálogo')};
 }
@@ -1652,7 +1695,9 @@ function processarCatalogo(ev){
         var r=json[i];
         var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
         var desc=String(r['Descrição Mercadoria']||r['Descricao Mercadoria']||r['Descrição']||r['Mercadoria']||'').trim();
-        if(cod&&cod.length>=3){store.put(desc,cod);count++}
+        var loc=String(r['Localizações']||r['Localizacoes']||r['Localização']||r['Localizacao']||'').trim();
+        if(semLocal(loc))loc='';
+        if(cod&&cod.length>=3){store.put({desc:desc,loc:loc},cod);count++}
       }
       tx.oncomplete=function(){
         catCount=count;
@@ -1679,7 +1724,10 @@ function atualizarBaseComCatalogo(){
     keys.forEach(function(cod){
       var req=store.get(cod);
       req.onsuccess=function(){
-        if(req.result){base[cod].desc=req.result;updated++}
+        if(req.result){
+          var r=typeof req.result==='string'?{desc:req.result,loc:''}:req.result;
+          base[cod].desc=r.desc;if(r.loc)base[cod].loc=r.loc;updated++;
+        }
       };
     });
     tx.oncomplete=function(){if(updated>0){saveBase()}};
