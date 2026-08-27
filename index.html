@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v13</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v14</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -1830,7 +1830,7 @@ function autoAtualizarCatalogo(forcar){
 setTimeout(autoAtualizarCatalogo,3000);
 
 // ===== ENVIO PRO DASHBOARD (backend Apps Script do inventário) =====
-var INV_API_URL='';// preenchido após implantar o backend
+var INV_API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
 var INV_TOKEN='mc-inv-2026';
 function enviarContagem(){
   if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}

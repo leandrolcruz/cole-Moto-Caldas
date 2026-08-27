@@ -26,6 +26,13 @@ var CAB_ITENS = ['contagem_id', 'codigo', 'descricao', 'local', 'saldo',
 
 function _props() { return PropertiesService.getScriptProperties(); }
 
+// Segredo: Script Property vence; senão cai no secrets.gs (fora do git)
+function _segredo(nome) {
+  var v = _props().getProperty(nome);
+  if (v) return v;
+  try { return SEGREDOS[nome]; } catch (e) { return null; }
+}
+
 function _aba(nome, cabecalho) {
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName(nome);
@@ -47,7 +54,7 @@ function doPost(e) {
   lock.waitLock(30000);
   try {
     var body = JSON.parse(e.postData.contents);
-    if (!body.token || body.token !== _props().getProperty('TOKEN_ENVIO')) {
+    if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
     var c = body.contagem || {};
@@ -101,7 +108,7 @@ function _apagarContagem(shC, shI, id) {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === 'ping') return _json({ok: true, servico: 'inventario-mc'});
-  if (!p.senha || p.senha !== _props().getProperty('SENHA')) {
+  if (!p.senha || p.senha !== _segredo('SENHA')) {
     return _json({ok: false, erro: 'senha inválida'});
   }
   if (p.action === 'getData') {
@@ -128,4 +135,10 @@ function doGet(e) {
     return _json({ok: true, itens: itens});
   }
   return _json({ok: false, erro: 'ação desconhecida'});
+}
+
+/** Rode UMA vez no editor pra conceder as permissões do script. */
+function autorizar() {
+  var ss = SpreadsheetApp.getActive();
+  Logger.log('OK — planilha: ' + ss.getName());
 }
