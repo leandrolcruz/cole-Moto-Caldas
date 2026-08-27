@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v12</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v13</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -1785,13 +1785,15 @@ function limparCatalogo(){
 
 // ===== CATÁLOGO EMBUTIDO (auto-download do GitHub Pages) =====
 var CATVK='inv_q900_cat_versao_remota';
-function autoAtualizarCatalogo(){
-  if(!navigator.onLine)return;
+function autoAtualizarCatalogo(forcar){
+  if(!navigator.onLine){if(forcar)toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  if(forcar)toast('Buscando catálogo...');
   fetch('catalogo.meta.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(meta){
     if(!meta||!meta.versao)return;
     var atual=localStorage.getItem(CATVK);
     contarCatalogo(function(n){
-      if(meta.versao===atual&&n>0)return;
+      if(!forcar&&meta.versao===atual&&n>0)return;
+      if(forcar&&meta.versao===atual&&n>0){toast('Catálogo já está na versão '+meta.versao+' ('+n.toLocaleString()+' peças)');return}
       toast('Baixando catálogo '+meta.versao+'...');
       fetch('catalogo.csv',{cache:'no-store'}).then(function(r){return r.text()}).then(function(txt){
         var linhas=txt.split('\n');
@@ -1828,10 +1830,8 @@ function renderCatStatus(){
   if(!el)return;
   var catV=localStorage.getItem(CATVK);
   el.innerHTML='<div class="c-item" style="cursor:default"><div class="c-info"><h4>📋 Catálogo de Peças</h4><p>'+(catCount>0?catCount.toLocaleString()+' peças carregadas'+(catV?' · '+catV:''):'Nenhum catálogo carregado')+'</p></div><div class="c-meta" style="display:flex;gap:6px">'+
-    '<button class="btn btn-sm btn-bl" onclick="importarCatalogo()">'+(catCount>0?'Atualizar':'Carregar')+'</button>'+
-    ''+
-    (catCount>0?'<button class="btn btn-sm btn-dg" onclick="limparCatalogo()">Limpar</button>':'')+
-    '</div></div><input type="file" id="catFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="processarCatalogo(event)">';
+    '<button class="btn btn-sm btn-bl" onclick="autoAtualizarCatalogo(true)">🔄 Atualizar</button>'+
+    '</div></div>';
 }
 
 // Atualizar verDescPeca para buscar no catálogo + editar quantidade
