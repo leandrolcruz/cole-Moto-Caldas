@@ -319,6 +319,7 @@
   <div class="items-list" id="relLivreItems" style="padding-bottom:80px"></div>
   <div class="bbar">
     <button class="btn btn-gn" style="flex:1" onclick="exportarAtual()">📤 Exportar .XLSX</button>
+    <button class="btn btn-bl" style="flex:1" onclick="enviarContagem()">☁️ Enviar</button>
   </div>
 </div>
 
@@ -336,6 +337,7 @@
   <div class="items-list" id="relItems" style="padding-bottom:80px"></div>
   <div class="bbar">
     <button class="btn btn-gn" style="flex:1" onclick="exportarDivergencias()">📤 Exportar Relatório .XLSX</button>
+    <button class="btn btn-bl" style="flex:1" onclick="enviarContagem()">☁️ Enviar</button>
   </div>
 </div>
 
@@ -422,6 +424,7 @@
   <div class="items-list" id="locRelItems" style="padding-bottom:80px"></div>
   <div class="bbar">
     <button class="btn btn-gn" style="flex:1" onclick="exportarTodasLocacoes()">📤 Exportar Relatório .XLSX</button>
+    <button class="btn btn-bl" style="flex:1" onclick="enviarContagem()">☁️ Enviar</button>
   </div>
 </div>
 
@@ -464,6 +467,7 @@
   <div class="items-list" id="relRoupaItems" style="padding-bottom:80px"></div>
   <div class="bbar">
     <button class="btn btn-gn" style="flex:1" onclick="exportarRoupas()">📤 Exportar .XLSX</button>
+    <button class="btn btn-bl" style="flex:1" onclick="enviarContagem()">☁️ Enviar</button>
   </div>
 </div>
 
@@ -1824,6 +1828,31 @@ function autoAtualizarCatalogo(forcar){
   }).catch(function(){});
 }
 setTimeout(autoAtualizarCatalogo,3000);
+
+// ===== ENVIO PRO DASHBOARD (backend Apps Script do inventário) =====
+var INV_API_URL='';// preenchido após implantar o backend
+var INV_TOKEN='mc-inv-2026';
+function enviarContagem(){
+  if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}
+  if(cur===null||!db.c[cur]){toast('Nenhuma contagem aberta');return}
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  var c=db.c[cur];
+  var itens=[];
+  if(c.modo==='roupa'){
+    (c.roupaItens||[]).forEach(function(it){itens.push({codigo:it.codigo,desc:it.desc||'',loc:it.loc||'',qtd:it.qtd,tamanho:it.tamanho,cor:it.cor})});
+  }else{
+    (c.ordem||[]).forEach(function(cod){var it=c.itens[cod]||{};itens.push({codigo:cod,desc:it.desc||'',loc:it.loc||(c.locacao||''),saldo:it.saldo,qtd:it.qtd,extra:!!it.extra})});
+  }
+  if(!itens.length){toast('Contagem vazia');return}
+  if(!c.envioId){c.envioId=c.modo+'-'+Date.now()+'-'+Math.floor(Math.random()*1e6);saveDB()}
+  toast('☁️ Enviando '+itens.length+' itens...');
+  fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:INV_TOKEN,contagem:{
+    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens}})})
+  .then(function(r){return r.json()}).then(function(j){
+    if(j&&j.ok){c.enviadaEm=now();saveDB();toast('☁️ Enviada! '+j.itens+' itens'+(j.divergencias?' · '+j.divergencias+' divergências':''))}
+    else{toast('Falha no envio: '+((j&&j.erro)||'?'))}
+  }).catch(function(){toast('Falha no envio — tente de novo')});
+}
 
 function renderCatStatus(){
   var el=document.getElementById('catalogoStatus');

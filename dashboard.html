@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inventário Moto Caldas — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{--bg:#0f1117;--card:#181b25;--bd:#2a2e42;--tx:#e8eaf2;--tx2:#a0a6bd;--tx3:#6b7089;
+        --ac:#e63946;--gn:#2dc653;--bl:#4895ef;--or:#f77f00;--yl:#ffd166;--dg:#e63946}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);padding:18px;max-width:1100px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:2px}h1 span{color:var(--ac)}
+  .sub{color:var(--tx3);font-size:12px;margin-bottom:16px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--bd)}
+  td{padding:7px 8px;border-bottom:1px solid rgba(42,46,66,.5)}
+  tr.clicavel{cursor:pointer}tr.clicavel:hover{background:rgba(72,149,239,.08)}
+  .btn{background:var(--bl);color:#fff;border:0;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600}
+  .btn.sec{background:var(--bd)}.btn.gn{background:var(--gn)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+  .b-gn{background:rgba(45,198,83,.15);color:var(--gn)}.b-dg{background:rgba(230,57,70,.15);color:var(--dg)}
+  .b-bl{background:rgba(72,149,239,.15);color:var(--bl)}.b-or{background:rgba(247,127,0,.15);color:var(--or)}
+  .dif-mais{color:var(--bl);font-weight:700}.dif-menos{color:var(--dg);font-weight:700}.dif-ok{color:var(--gn)}
+  input,select{background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:7px;padding:8px 10px;font-size:14px}
+  .linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .tabs{display:flex;gap:6px;margin-bottom:14px}
+  .tab{padding:8px 16px;border-radius:8px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx2)}
+  .tab.ativa{background:var(--bl);color:#fff;border-color:var(--bl)}
+  .vazio{color:var(--tx3);text-align:center;padding:30px;font-size:14px}
+  #telaSenha{max-width:360px;margin:80px auto;text-align:center}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 16px;flex:1;min-width:120px;text-align:center}
+  .kpi b{display:block;font-size:22px}.kpi span{font-size:11px;color:var(--tx3)}
+  @media(max-width:700px){td,th{padding:5px 4px;font-size:12px}}
+</style>
+</head>
+<body>
+<div id="telaSenha">
+  <h1>📦 Inventário <span>Moto Caldas</span></h1>
+  <p class="sub">Dashboard de contagens</p>
+  <div class="card">
+    <div class="linha" style="justify-content:center">
+      <input type="password" id="inpSenha" placeholder="Senha da equipe" style="flex:1">
+      <button class="btn" onclick="entrar()">Entrar</button>
+    </div>
+    <p id="senhaErro" style="color:var(--dg);font-size:12px"></p>
+  </div>
+</div>
+
+<div id="telaMain" style="display:none">
+  <div class="linha" style="justify-content:space-between">
+    <div><h1>📦 Inventário <span>Moto Caldas</span></h1>
+      <p class="sub">Contagens recebidas das coletoras</p></div>
+    <div><button class="btn sec" onclick="carregar()">↻ Recarregar</button>
+      <button class="btn sec" onclick="sair()">Sair</button></div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="tabs">
+    <div class="tab ativa" id="tabL" onclick="mudarTab('L')">Contagens</div>
+    <div class="tab" id="tabC" onclick="mudarTab('C')">1ª × 2ª contagem</div>
+  </div>
+  <div id="paneL"><div class="card"><div id="listaContagens" class="vazio">Carregando…</div></div>
+    <div class="card" id="cardDetalhe" style="display:none">
+      <div class="linha" style="justify-content:space-between">
+        <b id="detTitulo"></b>
+        <div><label style="font-size:12px;color:var(--tx2)"><input type="checkbox" id="soDiv" onchange="renderItens()"> só divergências</label>
+          <button class="btn gn" onclick="exportarXlsx()">⬇ Excel</button></div>
+      </div>
+      <div style="overflow-x:auto"><div id="detItens"></div></div>
+    </div></div>
+  <div id="paneC" style="display:none"><div class="card">
+    <div class="linha"><select id="selPar" onchange="renderComparacao()"></select></div>
+    <div style="overflow-x:auto"><div id="compArea" class="vazio">Escolha um par acima.</div></div>
+  </div></div>
+</div>
+
+<script>
+var API_URL='';// preenchido após implantar o backend (Apps Script /exec)
+var SK='inv_dash_senha';
+var contagens=[],itensAtual=[],contAtual=null;
+
+function senha(){return localStorage.getItem(SK)||''}
+function entrar(){
+  var s=document.getElementById('inpSenha').value.trim();
+  if(!s)return;
+  localStorage.setItem(SK,s);
+  testar();
+}
+function sair(){localStorage.removeItem(SK);location.reload()}
+function api(params){
+  var u=API_URL+(API_URL.indexOf('?')>-1?'&':'?')+'senha='+encodeURIComponent(senha())+'&'+params;
+  return fetch(u).then(function(r){return r.json()});
+}
+function testar(){
+  if(!API_URL){document.getElementById('senhaErro').textContent='Backend ainda não configurado (API_URL vazio).';return}
+  api('action=getData').then(function(j){
+    if(!j.ok){document.getElementById('senhaErro').textContent='Senha inválida.';localStorage.removeItem(SK);return}
+    document.getElementById('telaSenha').style.display='none';
+    document.getElementById('telaMain').style.display='block';
+    contagens=j.contagens||[];renderLista();
+  }).catch(function(){document.getElementById('senhaErro').textContent='Falha ao falar com o backend.'});
+}
+function carregar(){api('action=getData').then(function(j){if(j.ok){contagens=j.contagens||[];renderLista()}})}
+function mudarTab(t){
+  document.getElementById('tabL').classList.toggle('ativa',t==='L');
+  document.getElementById('tabC').classList.toggle('ativa',t==='C');
+  document.getElementById('paneL').style.display=t==='L'?'block':'none';
+  document.getElementById('paneC').style.display=t==='C'?'block':'none';
+  if(t==='C')montarPares();
+}
+function fmtData(v){
+  if(!v)return'';var d=new Date(v);
+  if(isNaN(d))return String(v);
+  return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function renderLista(){
+  var tot=contagens.length,div=0,pecas=0;
+  contagens.forEach(function(c){div+=Number(c.divergencias)||0;pecas+=Number(c.total_itens)||0});
+  document.getElementById('kpis').innerHTML=
+    '<div class="kpi"><b>'+tot+'</b><span>contagens</span></div>'+
+    '<div class="kpi"><b>'+pecas.toLocaleString('pt-BR')+'</b><span>itens contados</span></div>'+
+    '<div class="kpi"><b style="color:'+(div?'var(--dg)':'var(--gn)')+'">'+div+'</b><span>divergências</span></div>';
+  var el=document.getElementById('listaContagens');
+  if(!tot){el.className='vazio';el.textContent='Nenhuma contagem recebida ainda. Manda uma pelo app (☁️ Enviar).';return}
+  el.className='';
+  var ordenado=contagens.slice().sort(function(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)});
+  var h='<table><tr><th>Recebida</th><th>Modo</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Itens</th><th>Diverg.</th></tr>';
+  ordenado.forEach(function(c){
+    var d=Number(c.divergencias)||0;
+    h+='<tr class="clicavel" onclick="abrirDetalhe(\''+String(c.id).replace(/'/g,'')+'\')"><td>'+fmtData(c.recebido_em)+'</td>'+
+       '<td><span class="badge b-bl">'+(c.modo||'')+'</span></td><td>'+(c.nome||'')+'</td><td>'+(c.num_contagem||'')+'</td>'+
+       '<td>'+(c.conferente||'')+'</td><td>'+(c.locacao||'')+'</td><td>'+(c.total_itens||'')+'</td>'+
+       '<td><span class="badge '+(d?'b-dg':'b-gn')+'">'+d+'</span></td></tr>';
+  });
+  el.innerHTML=h+'</table>';
+}
+function abrirDetalhe(id){
+  contAtual=contagens.filter(function(c){return String(c.id)===id})[0];
+  document.getElementById('cardDetalhe').style.display='block';
+  document.getElementById('detTitulo').textContent=(contAtual.nome||contAtual.modo)+' — '+(contAtual.conferente||'')+' — '+fmtData(contAtual.recebido_em);
+  document.getElementById('detItens').innerHTML='<div class="vazio">Carregando itens…</div>';
+  api('action=getItens&id='+encodeURIComponent(id)).then(function(j){
+    itensAtual=j.ok?(j.itens||[]):[];renderItens();
+    document.getElementById('cardDetalhe').scrollIntoView({behavior:'smooth'});
+  });
+}
+function renderItens(){
+  var so=document.getElementById('soDiv').checked;
+  var roupa=itensAtual.some(function(i){return i.tamanho||i.cor});
+  var h='<table><tr><th>Código</th><th>Descrição</th><th>Local</th>'+(roupa?'<th>Tam.</th><th>Cor</th>':'')+'<th>Sist.</th><th>Cont.</th><th>Dif.</th></tr>';
+  var n=0;
+  itensAtual.forEach(function(i){
+    var temSaldo=i.saldo!==''&&i.saldo!==null&&i.saldo!==undefined;
+    var dif=temSaldo?Number(i.contado||0)-Number(i.saldo||0):null;
+    if(so&&(dif===null||dif===0))return;
+    n++;
+    var difTxt=dif===null?'—':dif===0?'OK':(dif>0?'+':'')+dif;
+    var cls=dif===null?'':dif===0?'dif-ok':dif>0?'dif-mais':'dif-menos';
+    h+='<tr><td style="font-family:monospace">'+i.codigo+(i.extra?' <span class="badge b-or">EXT</span>':'')+'</td><td>'+(i.descricao||'')+'</td><td>'+(i.local||'')+'</td>'+
+       (roupa?'<td>'+(i.tamanho||'')+'</td><td>'+(i.cor||'')+'</td>':'')+
+       '<td>'+(i.saldo===''?'—':i.saldo)+'</td><td><b>'+(i.contado===''?'—':i.contado)+'</b></td><td class="'+cls+'">'+difTxt+'</td></tr>';
+  });
+  document.getElementById('detItens').innerHTML=n?h+'</table>':'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';
+}
+function exportarXlsx(){
+  if(!itensAtual.length)return;
+  var dados=itensAtual.map(function(i){
+    var temSaldo=i.saldo!==''&&i.saldo!==null;
+    return {'Código':i.codigo,'Descrição':i.descricao,'Localização':i.local,
+            'Tamanho':i.tamanho||'','Cor':i.cor||'','Saldo Sistema':i.saldo,
+            'Contado':i.contado,'Diferença':temSaldo?Number(i.contado||0)-Number(i.saldo||0):'',
+            'Extra':i.extra||''};
+  });
+  var ws=XLSX.utils.json_to_sheet(dados);
+  ws['!cols']=[{wch:16},{wch:34},{wch:12},{wch:8},{wch:10},{wch:11},{wch:9},{wch:9},{wch:6}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contagem');
+  XLSX.writeFile(wb,('Contagem-'+(contAtual.nome||contAtual.modo)+'-'+(contAtual.num_contagem||'')+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
+}
+// ===== 1ª × 2ª =====
+function chavePar(c){return [c.modo,c.locacao||'',c.nome?String(c.nome).replace(/^[12]ª\s*/,''):''].join('|')}
+function montarPares(){
+  var grupos={};
+  contagens.forEach(function(c){
+    var n=Number(c.num_contagem);if(n!==1&&n!==2)return;
+    var k=c.modo+'|'+(c.locacao||'');
+    (grupos[k]=grupos[k]||{})[n]=c; // fica a mais recente de cada nº
+  });
+  var sel=document.getElementById('selPar');sel.innerHTML='<option value="">— escolha —</option>';
+  Object.keys(grupos).forEach(function(k){
+    var g=grupos[k];if(!g[1]||!g[2])return;
+    var o=document.createElement('option');o.value=g[1].id+'||'+g[2].id;
+    o.textContent=g[1].modo+(g[1].locacao?' · '+g[1].locacao:'')+' — '+g[1].conferente+' × '+g[2].conferente;
+    sel.appendChild(o);
+  });
+  if(sel.options.length===1)document.getElementById('compArea').innerHTML='<div class="vazio">Ainda não há um par 1ª+2ª do mesmo lugar pra comparar.</div>';
+}
+function renderComparacao(){
+  var v=document.getElementById('selPar').value;if(!v)return;
+  var ids=v.split('||');
+  document.getElementById('compArea').innerHTML='<div class="vazio">Cruzando…</div>';
+  Promise.all([api('action=getItens&id='+encodeURIComponent(ids[0])),
+               api('action=getItens&id='+encodeURIComponent(ids[1]))]).then(function(rs){
+    var m1={},m2={};
+    (rs[0].itens||[]).forEach(function(i){m1[i.codigo]=i});
+    (rs[1].itens||[]).forEach(function(i){m2[i.codigo]=i});
+    var cods=Object.keys(Object.assign({},m1,m2)).sort();
+    var h='<table><tr><th>Código</th><th>Descrição</th><th>Local</th><th>Sist.</th><th>1ª</th><th>2ª</th><th>1ª×2ª</th></tr>';
+    var diverg=0;
+    cods.forEach(function(cod){
+      var a=m1[cod]||{},b=m2[cod]||{};
+      var q1=a.contado===''||a.contado===undefined?null:Number(a.contado);
+      var q2=b.contado===''||b.contado===undefined?null:Number(b.contado);
+      var igual=q1!==null&&q2!==null&&q1===q2;
+      if(!igual)diverg++;
+      h+='<tr'+(igual?'':' style="background:rgba(230,57,70,.06)"')+'><td style="font-family:monospace">'+cod+'</td><td>'+(a.descricao||b.descricao||'')+'</td><td>'+(a.local||b.local||'')+'</td>'+
+         '<td>'+(a.saldo!==''&&a.saldo!==undefined?a.saldo:(b.saldo||'—'))+'</td><td>'+(q1===null?'—':q1)+'</td><td>'+(q2===null?'—':q2)+'</td>'+
+         '<td>'+(igual?'<span class="dif-ok">OK</span>':'<span class="dif-menos">✗</span>')+'</td></tr>';
+    });
+    document.getElementById('compArea').innerHTML='<p class="sub">'+cods.length+' códigos · <b style="color:'+(diverg?'var(--dg)':'var(--gn)')+'">'+diverg+' em desacordo</b></p>'+h+'</table>';
+  });
+}
+// boot
+if(senha())testar();
+document.getElementById('inpSenha').addEventListener('keydown',function(e){if(e.key==='Enter')entrar()});
+</script>
+</body>
+</html>
