@@ -16,7 +16,7 @@ Integra com o **Microwork Cloud DMS**.
 ## Funcionalidades
 
 - Catálogo de 134 mil peças via IndexedDB
-- Validação de código (etiquetas com `-` são rejeitadas)
+- Validação de código (etiquetas com `-` só são aceitas se a peça existir no catálogo, ex.: CAP-1063PTF)
 - Aviso quando peça não está no catálogo
 - Sons diferenciados (confirmação, alerta, erro) e vibração
 - Exportação em Excel (.xlsx) com compartilhamento direto (Google Drive)

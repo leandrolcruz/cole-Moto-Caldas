@@ -99,6 +99,8 @@
   .item-loc{font-size:11px;color:var(--tx2);min-width:50px;text-align:center}
   .item-qty{min-width:35px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ac)}
   .item-saldo{min-width:35px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3)}
+  .item-desc{flex:2;font-size:10px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item-sub{flex-basis:100%;font-size:10px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:2px}
   .item-hdr{font-weight:700;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;padding:5px 10px;border-bottom:1px solid var(--bd)}
   .item-hdr .item-qty,.item-hdr .item-saldo{font-size:10px;color:var(--tx3)}
   .div-ok{color:var(--gn)}.div-mais{color:var(--bl)}.div-menos{color:var(--dg)}
@@ -660,8 +662,25 @@ function somAlerta(){somAlertaDuplo();if(navigator.vibrate)navigator.vibrate([15
 // ===== FOCUS HELPER =====
 function safeFocus(el){if(!el)return;el.focus()}
 
-// Validar código
-function codInvalido(cod){return cod.indexOf('-')!==-1}
+// Validar código — hífen só é inválido se a peça não existir no catálogo
+var HIFK='inv_q900_cat_hifens';
+var catHifens={};
+try{catHifens=JSON.parse(localStorage.getItem(HIFK))||{}}catch(e){catHifens={}}
+function codInvalido(cod){return cod.indexOf('-')!==-1&&!catHifens[cod]}
+function salvarCatHifens(){try{localStorage.setItem(HIFK,JSON.stringify(catHifens))}catch(e){}}
+// Migração: reconstruir índice de códigos com hífen a partir do catálogo já carregado
+function reconstruirCatHifens(){
+  if(localStorage.getItem(HIFK)!==null)return;
+  abrirCatDB(function(db2){
+    var req=db2.transaction('pecas','readonly').objectStore('pecas').getAllKeys();
+    req.onsuccess=function(){
+      var hif={},ks=req.result||[];
+      for(var i=0;i<ks.length;i++){var k=String(ks[i]);if(k.indexOf('-')!==-1)hif[k]=1}
+      catHifens=hif;salvarCatHifens();
+    };
+  });
+}
+reconstruirCatHifens();
 
 // Verificar se código existe no catálogo (134K peças)
 function verificarCatalogo(cod){
@@ -672,6 +691,24 @@ function verificarCatalogo(cod){
       return;
     }
     var r=typeof res==='string'?{desc:res,loc:''}:res;
+    // Atualizar desc e loc do item na contagem (vindo do IndexedDB)
+    var c=db.c[cur];
+    if(c){
+      var changed=false;
+      if(c.itens[cod]){
+        if(r.desc&&!c.itens[cod].desc){c.itens[cod].desc=r.desc;changed=true}
+        if(r.loc&&!c.itens[cod].loc){c.itens[cod].loc=r.loc;changed=true}
+      }
+      if(c.modo==='roupa'&&c.roupaItens){
+        for(var i=0;i<c.roupaItens.length;i++){
+          var it=c.roupaItens[i];
+          if(it.codigo!==cod)continue;
+          if(r.desc&&!it.desc){it.desc=r.desc;changed=true}
+          if(r.loc&&!it.loc){it.loc=r.loc;changed=true}
+        }
+      }
+      if(changed){saveDB();if(c.modo==='livre')renderLivre();else if(c.modo==='diaria')renderDiaria();else if(c.modo==='locacao')renderLocCont();else if(c.modo==='roupa')renderRoupa()}
+    }
     if(semLocal(r.loc)){
       somAlertaDuplo();
       toast('⚠ '+cod+' sem localização no catálogo');
@@ -742,13 +779,13 @@ function renderLivre(codDestaque){
   document.getElementById('slBipes').textContent=c.totalBipes;
   var filtro=(document.getElementById('filtroLivre')?document.getElementById('filtroLivre').value:'').toUpperCase().trim();
   var el=document.getElementById('livreItems');
-  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-qty">Qtd</span></div>';
+  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-qty">Qtd</span></div>';
   var ord=c.ordem.slice().reverse();
   for(var i=0;i<ord.length;i++){
     var cod=ord[i],it=c.itens[cod];
     if(filtro&&cod.toUpperCase().indexOf(filtro)===-1)continue;
     var flash=cod===codDestaque?' item-flash':'';
-    h+='<div class="item-row'+flash+'" id="row-'+cod+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-qty">'+it.qtd+'</span></div>';
+    h+='<div class="item-row'+flash+'" id="row-'+cod+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-qty">'+it.qtd+'</span></div>';
   }
   el.innerHTML=h;
   if(codDestaque){var row=document.getElementById('row-'+codDestaque);if(row)row.scrollIntoView({behavior:'smooth',block:'center'})}
@@ -788,10 +825,11 @@ function bipeLivre(){
     fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();
   }else{
     var loc=base[cod]?base[cod].loc||'':'';
-    c.itens[cod]={qtd:1,desc:base[cod]?base[cod].desc||'':'',loc:loc};
+    var desc0=base[cod]?base[cod].desc||'':'';
+    c.itens[cod]={qtd:1,desc:desc0,loc:loc};
     if(c.ordem.indexOf(cod)===-1)c.ordem.push(cod);
     ultimoBipe={modo:'livre',cod:cod,qtdAntes:0,era_novo:true};
-    fb.textContent='★ Novo → '+cod+(loc?' ('+loc+')':'');fb.className='scan-fb fb-new';somConfirmacao();
+    fb.textContent='★ Novo → '+cod+(desc0?' — '+desc0:'')+(loc?' ('+loc+')':'');fb.className='scan-fb fb-new';somConfirmacao();
   }
   saveDB();renderLivre(cod);scanL.value='';safeFocus(scanL);
   verificarCatalogo(cod);
@@ -900,14 +938,14 @@ function abrirDiariaConf(){
 function renderDiaria(codDestaque){
   var c=db.c[cur],total=0,ok=0,pend=0;
   var el=document.getElementById('diariaItems');
-  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span></div>';
+  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span></div>';
   for(var i=0;i<c.ordem.length;i++){
     var cod=c.ordem[i],it=c.itens[cod];total++;
     var contado=it.qtd!==null;if(contado)ok++;else pend++;
     var qDisp=contado?it.qtd:'-';
     var qColor=!contado?'color:var(--tx3)':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
     var flash=cod===codDestaque?' item-flash':'';
-    h+='<div class="item-row'+flash+'" id="rowd-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
+    h+='<div class="item-row'+flash+'" id="rowd-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
   }
   el.innerHTML=h;
   document.getElementById('sdTotal').textContent=total;document.getElementById('sdOk').textContent=ok;document.getElementById('sdPend').textContent=pend;
@@ -990,10 +1028,10 @@ function abrirRelLivre(idx){
   document.getElementById('rlItens').textContent=Object.keys(c.itens).length;
   document.getElementById('rlBipes').textContent=c.totalBipes;
   var el=document.getElementById('relLivreItems');
-  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-qty">Qtd</span></div>';
+  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-qty">Qtd</span></div>';
   for(var i=0;i<c.ordem.length;i++){
     var cod=c.ordem[i],it=c.itens[cod];
-    h+='<div class="item-row" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-qty">'+it.qtd+'</span></div>';
+    h+='<div class="item-row" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-qty">'+it.qtd+'</span></div>';
   }
   el.innerHTML=h;
 }
@@ -1039,12 +1077,12 @@ function abrirRelatorio(idx){
   cur=idx;var c=db.c[idx];show('scrRelatorio');
   document.getElementById('relSub').textContent=c.nome+' — '+(c.conferente||'')+' — '+c.data;
   var total=0,ok=0,div=0;var el=document.getElementById('relItems');
-  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span><span class="item-saldo">Dif.</span></div>';
+  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span><span class="item-saldo">Dif.</span></div>';
   for(var i=0;i<c.ordem.length;i++){
     var cod=c.ordem[i],it=c.itens[cod];if(it.qtd===null)continue;total++;
     var dif=it.qtd-it.saldo;var difStr=dif===0?'OK':dif>0?'+'+dif:''+dif;var difClass=dif===0?'div-ok':dif>0?'div-mais':'div-menos';
     if(dif===0)ok++;else div++;
-    h+='<div class="item-row"><span class="item-code">'+cod+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="font-weight:700">'+it.qtd+'</span><span class="item-saldo '+difClass+'" style="font-weight:700">'+difStr+'</span></div>';
+    h+='<div class="item-row"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="font-weight:700">'+it.qtd+'</span><span class="item-saldo '+difClass+'" style="font-weight:700">'+difStr+'</span></div>';
   }
   el.innerHTML=h;document.getElementById('relTotal').textContent=total;document.getElementById('relOk').textContent=ok;document.getElementById('relDiv').textContent=div;
 }
@@ -1305,7 +1343,7 @@ function abrirContLoc(loc,numCont,conferente){
   var itens={},ordem=[];
   for(var j=0;j<pecas.length;j++){
     var cod=pecas[j],p=locBase.pecas[cod];
-    itens[cod]={qtd:null,saldo:p.saldo,loc:loc,extra:false,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
+    itens[cod]={qtd:null,desc:(base[cod]&&base[cod].desc)||'',saldo:p.saldo,loc:loc,extra:false,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
     ordem.push(cod);
   }
   db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
@@ -1326,7 +1364,7 @@ function showLocAlert(type,txt){hideLocAlerts();var id=type==='warn'?'locAlertWa
 function renderLocCont(codDestaque){
   var c=db.c[cur],total=0,ok=0,pend=0,extra=0;
   var el=document.getElementById('locContItems');
-  var h='<div class="item-row item-hdr"><span class="loc-item-status"></span><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span></div>';
+  var h='<div class="item-row item-hdr"><span class="loc-item-status"></span><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span></div>';
   // Normais primeiro, extras depois
   var normais=[],extras=[];
   for(var i=0;i<c.ordem.length;i++){var cod=c.ordem[i];if(c.itens[cod].extra)extras.push(cod);else normais.push(cod)}
@@ -1339,7 +1377,7 @@ function renderLocCont(codDestaque){
     var qDisp=contado?it.qtd:'-';
     var qColor=!contado?'color:var(--tx3)':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
     var flash=cod===codDestaque?' item-flash':'';
-    h+='<div class="item-row'+flash+'" id="rowl-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="loc-item-status">'+icon+'</span><span class="item-code">'+cod+(isExtra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-loc">'+(isExtra?it.loc:'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
+    h+='<div class="item-row'+flash+'" id="rowl-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="loc-item-status">'+icon+'</span><span class="item-code">'+cod+(isExtra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
   }
   el.innerHTML=h;
   document.getElementById('slcTotal').textContent=total;document.getElementById('slcOk').textContent=ok;document.getElementById('slcPend').textContent=pend;
@@ -1367,6 +1405,7 @@ function bipeLoc(){
     buscarCatalogo(cod,function(res){
       if(!res)return;
       var r=typeof res==='string'?{desc:res,loc:''}:res;
+      if(r.desc&&!c.itens[cod].desc){c.itens[cod].desc=r.desc;saveDB();renderLocCont()}
       if(r.loc&&r.loc.toUpperCase()!==c.locacao.toUpperCase()){
         somAlerta();showLocAlert('warn','Catálogo indica localização '+r.loc+' para '+cod);
       }
@@ -1378,7 +1417,7 @@ function bipeLoc(){
   // 3. Peça de OUTRA locação — registra como extra automaticamente
   if(locBase&&locBase.pecas[cod]){
     var p=locBase.pecas[cod],locCorreta=p.loc;
-    c.itens[cod]={qtd:1,saldo:p.saldo||0,loc:locCorreta,extra:true,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
+    c.itens[cod]={qtd:1,desc:(base[cod]&&base[cod].desc)||'',saldo:p.saldo||0,loc:locCorreta,extra:true,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
     c.ordem.push(cod);if(!c.extras)c.extras=[];c.extras.push(cod);
     ultimoBipe={modo:'locacao',cod:cod,qtdAntes:0,era_novo:true};
     fb.textContent='⚠ '+cod+' pertence a '+locCorreta+' — extra';fb.className='scan-fb fb-add';
@@ -1392,7 +1431,7 @@ function bipeLoc(){
 function registrarOutraLoc(){
   var c=db.c[cur],cod=tmpOutraCod,qtd=parseInt(document.getElementById('modLocOutraQtd').value)||1;
   var p=locBase.pecas[cod];
-  c.itens[cod]={qtd:qtd,saldo:p?p.saldo:0,loc:p?p.loc:'?',extra:true,curva:p?p.curva||'':'',marca:p?p.marca||'':'',ultEntrada:p?p.ultEntrada||'':'',ultSaida:p?p.ultSaida||':':''};
+  c.itens[cod]={qtd:qtd,desc:(base[cod]&&base[cod].desc)||'',saldo:p?p.saldo:0,loc:p?p.loc:'?',extra:true,curva:p?p.curva||'':'',marca:p?p.marca||'':'',ultEntrada:p?p.ultEntrada||'':'',ultSaida:p?p.ultSaida||':':''};
   c.ordem.push(cod);if(!c.extras)c.extras=[];c.extras.push(cod);
   ultimoBipe={modo:'locacao',cod:cod,qtdAntes:0,era_novo:true};
   saveDB();closeM('modLocOutra');hideLocAlerts();showLocAlert('info',cod+' registrado como extra (de '+c.itens[cod].loc+')');
@@ -1430,12 +1469,12 @@ function abrirLocRel(idx){
   cur=idx;var c=db.c[idx];show('scrLocRel');
   document.getElementById('locRelSub').textContent=c.nome+' — '+c.conferente+' — '+c.data;
   var total=0,ok=0,div=0;var el=document.getElementById('locRelItems');
-  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span><span class="item-saldo">Dif.</span></div>';
+  var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span><span class="item-saldo">Dif.</span></div>';
   for(var i=0;i<c.ordem.length;i++){
     var cod=c.ordem[i],it=c.itens[cod];if(it.qtd===null)continue;total++;
     var dif=it.qtd-it.saldo;var difStr=dif===0?'OK':dif>0?'+'+dif:''+dif;var difClass=dif===0?'div-ok':dif>0?'div-mais':'div-menos';
     if(dif===0)ok++;else div++;
-    h+='<div class="item-row"><span class="item-code">'+cod+(it.extra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-loc">'+(it.extra?it.loc:c.locacao)+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="font-weight:700">'+it.qtd+'</span><span class="item-saldo '+difClass+'" style="font-weight:700">'+difStr+'</span></div>';
+    h+='<div class="item-row"><span class="item-code">'+cod+(it.extra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.extra?it.loc:c.locacao)+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="font-weight:700">'+it.qtd+'</span><span class="item-saldo '+difClass+'" style="font-weight:700">'+difStr+'</span></div>';
   }
   el.innerHTML=h;document.getElementById('lrTotal').textContent=total;document.getElementById('lrOk').textContent=ok;document.getElementById('lrDiv').textContent=div;
 }
@@ -1690,17 +1729,18 @@ function processarCatalogo(ev){
     abrirCatDB(function(db2){
       var tx=db2.transaction('pecas','readwrite');
       var store=tx.objectStore('pecas');
-      var count=0;
+      var count=0,hif={};
       for(var i=0;i<json.length;i++){
         var r=json[i];
         var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
         var desc=String(r['Descrição Mercadoria']||r['Descricao Mercadoria']||r['Descrição']||r['Mercadoria']||'').trim();
         var loc=String(r['Localizações']||r['Localizacoes']||r['Localização']||r['Localizacao']||'').trim();
         if(semLocal(loc))loc='';
-        if(cod&&cod.length>=3){store.put({desc:desc,loc:loc},cod);count++}
+        if(cod&&cod.length>=3){store.put({desc:desc,loc:loc},cod);count++;if(cod.indexOf('-')!==-1)hif[cod]=1}
       }
       tx.oncomplete=function(){
         catCount=count;
+        catHifens=hif;salvarCatHifens();
         toast(count.toLocaleString()+' peças carregadas no catálogo');
         renderCatStatus();
         // Também atualizar base com descrições
@@ -1738,7 +1778,7 @@ function limparCatalogo(){
   abrirCatDB(function(db2){
     var tx=db2.transaction('pecas','readwrite');
     tx.objectStore('pecas').clear();
-    tx.oncomplete=function(){catCount=0;toast('Catálogo limpo');renderCatStatus()};
+    tx.oncomplete=function(){catCount=0;catHifens={};salvarCatHifens();toast('Catálogo limpo');renderCatStatus()};
   });
 }
 
@@ -1867,7 +1907,8 @@ function renderRoupa(codDestaque){
     var it=items[i];
     if(filtro&&it.codigo.toUpperCase().indexOf(filtro)===-1)continue;
     var flash=it.codigo===codDestaque&&i===(items.length-1)?' item-flash':'';
-    h+='<div class="item-row'+flash+'" onclick="verDescRoupa('+i+')" style="cursor:pointer"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span></div>';
+    var sub=(it.desc||'')+(it.loc?(it.desc?' • ':'')+'📍 '+it.loc:'');
+    h+='<div class="item-row'+flash+'" style="flex-wrap:wrap;cursor:pointer" onclick="verDescRoupa('+i+')"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span>'+(sub?'<span class="item-sub">'+sub+'</span>':'')+'</div>';
   }
   if(!items.length)h+='<div class="empty-msg">Bipe um código para começar</div>';
   el.innerHTML=h;
@@ -1981,7 +2022,7 @@ function confirmarCorTam(){
     fb.textContent='✓ +1 → '+cod+' '+tam+' '+cor+' = '+c.roupaItens[found].qtd;fb.className='scan-fb fb-add';
     somConfirmacao();
   }else{
-    c.roupaItens.push({codigo:cod,desc:desc,tamanho:tam,cor:cor,qtd:1});
+    c.roupaItens.push({codigo:cod,desc:desc,loc:(base[cod]&&base[cod].loc)||'',tamanho:tam,cor:cor,qtd:1});
     ultimoBipe={modo:'roupa',idx:c.roupaItens.length-1,qtdAntes:0,era_novo:true};
     var fb=document.getElementById('fbRoupa');
     fb.textContent='★ '+cod+' '+tam+' '+cor+' = 1';fb.className='scan-fb fb-new';
@@ -2027,7 +2068,8 @@ function abrirRelRoupa(idx){
   var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-loc">Tam.</span><span class="item-loc">Cor</span><span class="item-qty">Qtd</span></div>';
   for(var i=0;i<items.length;i++){
     var it=items[i];
-    h+='<div class="item-row"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span></div>';
+    var sub=(it.desc||'')+(it.loc?(it.desc?' • ':'')+'📍 '+it.loc:'');
+    h+='<div class="item-row" style="flex-wrap:wrap"><span class="item-code">'+it.codigo+'</span><span class="item-loc">'+it.tamanho+'</span><span class="item-loc">'+it.cor+'</span><span class="item-qty">'+it.qtd+'</span>'+(sub?'<span class="item-sub">'+sub+'</span>':'')+'</div>';
   }
   el.innerHTML=h;
 }
