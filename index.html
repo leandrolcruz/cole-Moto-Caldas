@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v10</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v11</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -221,6 +221,7 @@
       <div style="display:flex;gap:6px">
         <button class="undo-btn" onclick="exportarBackup()">💾 Backup</button>
         <button class="undo-btn" onclick="document.getElementById('importBackup').click()">📂 Restaurar</button>
+        <button class="undo-btn" onclick="atualizarApp()">🔄 Atualizar</button>
         <input type="file" id="importBackup" accept=".json" style="display:none" onchange="restaurarBackup(event)">
         <button class="btn btn-sm btn-dg" style="font-size:11px;padding:4px 10px" onclick="confirmReset()">🗑</button>
       </div>
@@ -2157,13 +2158,36 @@ contarCatalogo(function(){renderCatStatus()});
 renderHome();
 
 
-// PWA: Registrar Service Worker
+// PWA: Registrar Service Worker + auto-update
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(function(){
+  navigator.serviceWorker.register('sw.js').then(function(reg){
     console.log('SW registrado');
+    if(reg.update)reg.update(); // checar atualização a cada abertura
   }).catch(function(e){
     console.log('SW erro:',e);
   });
+  // Quando um SW novo assumir, recarregar UMA vez para já mostrar a versão nova
+  var _swReloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(_swReloaded)return;_swReloaded=true;location.reload();
+  });
+}
+
+// Forçar atualização manual (botão 🔄 na home)
+function atualizarApp(){
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  toast('Buscando atualização...');
+  var recarregar=function(){setTimeout(function(){location.reload()},800)};
+  caches.keys().then(function(ks){
+    return Promise.all(ks.map(function(k){return caches.delete(k)}));
+  }).then(function(){
+    if(navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(reg)reg.update();
+        recarregar();
+      }).catch(recarregar);
+    }else recarregar();
+  }).catch(recarregar);
 }
 </script>
 </body>
