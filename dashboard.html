@@ -92,6 +92,12 @@
       <div class="linha"><input type="file" id="file-locacao" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('locacao')">Enviar base</button></div>
       <p class="sub" id="st-locacao"></p>
     </div>
+    <div class="card">
+      <b>🏷️ Base da Contagem por Tipo</b> <span class="sub" style="display:inline">(Listagem de Mercadoria com a coluna Tipo Mercadoria)</span>
+      <p class="sub" id="meta-tipo" style="margin:6px 0">…</p>
+      <div class="linha"><input type="file" id="file-tipo" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('tipo')">Enviar base</button></div>
+      <p class="sub" id="st-tipo"></p>
+    </div>
   </div>
 </div>
 
@@ -258,7 +264,7 @@ function formatarDataXlsx(v){
 function renderBases(){
   api('action=getBases').then(function(j){
     if(!j.ok)return;
-    ['diaria','locacao'].forEach(function(t){
+    ['diaria','locacao','tipo'].forEach(function(t){
       var m=j.bases[t];
       document.getElementById('meta-'+t).textContent=m?('Base atual: '+fmtData(m.enviado_em)+' · '+m.n+' peças'+(m.por?' · enviada por '+m.por:'')):'Nenhuma base enviada ainda.';
     });
@@ -293,6 +299,17 @@ function uploadBase(tipo){
         var saldo=typeof saldoRaw==='number'?Math.round(saldoRaw):parseInt(String(saldoRaw).replace(/\./g,'').replace(',','.'))||0;
         if(vistos[cod]!==undefined){if(saldo>pecas[vistos[cod]].saldo)pecas[vistos[cod]].saldo=saldo}
         else{vistos[cod]=pecas.length;pecas.push({codigo:cod,desc:merc,loc:loc,saldo:saldo,qtdMov:qtdMov})}
+      }else if(tipo==='tipo'){
+        var cod3=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
+        if(!cod3||cod3.length<3)continue;
+        var tp=String(r['Tipo Mercadoria']||r['Tipo de Mercadoria']||r['Tipo de mercadoria']||r['Tipo']||'').trim().toUpperCase()||'SEM TIPO';
+        var desc3=String(r['Descrição Mercadoria']||r['Descricao Mercadoria']||r['Descrição']||r['Mercadoria']||'').trim();
+        var loc3=String(r['Localizações']||r['Localizacoes']||r['Localização']||r['Localizacao']||r['Local']||'').replace(/[\[\]]/g,'').replace(/SEM LOCAL/g,'').trim();
+        var sRaw3=r['Saldo Disponível']||r['Saldo Disponivel']||r['Saldo Contábil']||r['Saldo Contabil']||r['Saldo']||0;
+        var s3=typeof sRaw3==='number'?Math.round(sRaw3):Math.round(parseFloat(String(sRaw3).replace(/\./g,'').replace(',','.'))||0);
+        if(s3<=0)continue;
+        if(vistos[cod3]!==undefined){if(s3>pecas[vistos[cod3]].saldo)pecas[vistos[cod3]].saldo=s3}
+        else{vistos[cod3]=pecas.length;pecas.push({codigo:cod3,desc:desc3,tipo:tp,loc:loc3,saldo:s3})}
       }else{
         var cod2=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
         var loc2=normalizarLoc(String(r['Localização']||r['Localizacao']||r['Local']||r['localização']||''));

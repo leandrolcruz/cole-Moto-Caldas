@@ -205,13 +205,14 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v15</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v16</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
       <div class="mode-card c-red" onclick="novaLivre()"><div class="ci">🔫</div><div class="mc-text"><h3>Contagem Livre</h3><p>Bipe códigos livremente. Cada bipe = +1 unidade.</p></div></div>
       <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><div class="mc-text"><h3>Contagem Diária</h3><p>Base vem do dashboard. Confira o saldo por localização.</p></div></div>
       <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Base vem do dashboard. Conte por corredor, estante e prateleira.</p></div></div>
+      <div class="mode-card c-gn" onclick="abrirTipo()"><div class="ci">🏷️</div><div class="mc-text"><h3>Contagem por Tipo</h3><p>Base vem do dashboard. Conte por tipo de mercadoria (capacetes, pneus, boutique...).</p></div></div>
       <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><div class="mc-text"><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div></div>
     </div>
     <div id="resumoGeral"></div>
@@ -337,10 +338,10 @@
 <div class="screen" id="scrLocImp">
   <div class="inv-topbar">
     <button class="back" onclick="goHome()">←</button>
-    <div class="inv-title"><h2>Contagem por Locação</h2><p>Base vem do dashboard — aqui só bipa</p></div>
+    <div class="inv-title"><h2 id="locImpTit">Contagem por Locação</h2><p>Base vem do dashboard — aqui só bipa</p></div>
   </div>
   <div class="imp-area">
-    <div class="file-drop" onclick="buscarBaseRemota('locacao')">
+    <div class="file-drop" onclick="buscarBaseLocOuTipo()">
       <div class="icon">☁️</div>
       <p>Buscar base do dashboard</p>
       <small id="locBaseMeta">A planilha é enviada pelo computador — aqui só bipa</small>
@@ -353,7 +354,7 @@
 <div class="screen" id="scrLocSel">
   <div class="inv-topbar">
     <button class="back" onclick="goHome()">←</button>
-    <div class="inv-title"><h2>Escolher Locação</h2><p id="locSelSub"></p></div>
+    <div class="inv-title"><h2 id="locSelTit">Escolher Locação</h2><p id="locSelSub"></p></div>
     <span class="badge badge-bl">📍</span>
   </div>
   <div style="padding:10px 16px 0"><input class="loc-search" id="locSearchInput" placeholder="Buscar locação..." oninput="filtrarLocacoes()"></div>
@@ -590,6 +591,7 @@
 
 <script>
 var DB='inv_q900',BK='inv_q900_base',LK='inv_q900_loc_base';
+var TK='inv_q900_tipo_base',locModoAtual='locacao';
 var db=loadDB(),base=loadBase(),cur=null,timer=null,tmpDiaria=[],locBase=loadLocBase(),tmpLoc=[];
 var ultimoBipe=null,locAtual='',tmpOutraCod='',codDiariaAtual='',delIdx=-1,pendingLoc='',pendingNum=0,tmpLocWb=null,tmpLocBytes=null;
 
@@ -598,7 +600,7 @@ function saveDB(){localStorage.setItem(DB,JSON.stringify(db))}
 function loadBase(){try{return JSON.parse(localStorage.getItem(BK))||{};}catch(e){return{};}}
 function saveBase(){localStorage.setItem(BK,JSON.stringify(base))}
 function loadLocBase(){try{return JSON.parse(localStorage.getItem(LK))||null;}catch(e){return null;}}
-function saveLocBase(){localStorage.setItem(LK,JSON.stringify(locBase))}
+function saveLocBase(){localStorage.setItem(locModoAtual==='tipo'?TK:LK,JSON.stringify(locBase))}
 
 function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});document.getElementById(id).classList.add('active')}
 function goHome(){show('scrHome');renderHome()}
@@ -725,7 +727,7 @@ function renderHome(){
   var h='';
   for(var i=n-1;i>=0;i--){
     var c=db.c[i],ic=Object.keys(c.itens).length,sc=c.status==='ok'?'sts-ok':'sts-and',st=c.status==='ok'?'Concluída':'Em andamento';
-    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?'📍 '+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
+    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porTipo?'🏷️ ':'📍 ')+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
     var conf=c.conferente?' • '+c.conferente:'';
     h+='<div class="c-item"><div class="c-info" onclick="abrirC('+i+')"><h4>'+c.nome+'</h4><p>'+tipo+conf+' • '+c.data+' • '+c.totalBipes+' bipes</p></div><div class="c-meta"><div class="cnt" onclick="abrirC('+i+')">'+ic+'</div><div class="sts '+sc+'" onclick="abrirC('+i+')">'+st+'</div><button class="del-btn" onclick="event.stopPropagation();delContagem('+i+')">🗑</button></div></div>';
   }
@@ -993,6 +995,9 @@ function salvarQtdDiaria(){
 function abrirC(idx){
   cur=idx;var c=db.c[cur];
   if(c.modo==='locacao'){
+    // restaurar o contexto certo (base por tipo × por locação)
+    locModoAtual=c.porTipo?'tipo':'locacao';
+    try{locBase=JSON.parse(localStorage.getItem(c.porTipo?TK:LK))||locBase}catch(e){}
     locAtual=c.locacao;
     if(c.status==='ok'){abrirLocRel(idx);return}
     abrirContLocTela();return;
@@ -1177,13 +1182,33 @@ function _exportarDiariaFallback(){
 function normalizarLoc(loc){if(!loc)return 'SEM LOCAL';loc=loc.trim().toUpperCase();if(loc===''||loc==='0'||loc==='00'||loc==='[SEM LOCAL]')return 'SEM LOCAL';return loc}
 
 function abrirLocacao(){
+  locModoAtual='locacao';locBase=loadLocBase();
+  document.getElementById('locImpTit').textContent='Contagem por Locação';
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('locacao');
   if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('locacao');
+  _renderLocBaseCard();
+}
+function abrirTipo(){
+  locModoAtual='tipo';
+  try{locBase=JSON.parse(localStorage.getItem(TK))||null}catch(e){locBase=null}
+  document.getElementById('locImpTit').textContent='Contagem por Tipo';
+  tmpLoc=[];show('scrLocImp');
+  _setBaseMetaUI('tipo');
+  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('tipo');
+  _renderLocBaseCard();
+}
+function buscarBaseLocOuTipo(){buscarBaseRemota(locModoAtual==='tipo'?'tipo':'locacao')}
+function limparBaseLoc(){
+  locBase=null;localStorage.removeItem(locModoAtual==='tipo'?TK:LK);
+  toast('Base removida');
+  if(locModoAtual==='tipo')abrirTipo();else abrirLocacao();
+}
+function _renderLocBaseCard(){
   var el=document.getElementById('locBaseAtual');
   if(locBase&&locBase.pecas){
     var np=Object.keys(locBase.pecas).length,nl=Object.keys(locBase.locacoes||{}).length;
-    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+' peças • '+nl+' locações</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="locBase=null;localStorage.removeItem(LK);toast(\'Base removida\');abrirLocacao()">Limpar</button></div></div>';
+    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+' peças • '+nl+' '+(locModoAtual==='tipo'?'tipos':'locações')+'</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="limparBaseLoc()">Limpar</button></div></div>';
   }else{el.innerHTML=''}
 }
 
@@ -1242,11 +1267,13 @@ function salvarBaseLocacao(){
 // ===== LOCAÇÃO: SELECIONAR =====
 function iniciarSelLoc(){
   if(!locBase||!locBase.locacoes){toast('Carregue a base primeiro');return}
+  document.getElementById('locSelTit').textContent=locModoAtual==='tipo'?'Escolher Tipo':'Escolher Locação';
   show('scrLocSel');
   document.getElementById('locSelSub').textContent=Object.keys(locBase.pecas).length+' peças • '+Object.keys(locBase.locacoes).length+' locações';
   document.getElementById('locSearchInput').value='';renderLocGroups('');
 }
 function extrairGrupo(loc){
+  if(locModoAtual==='tipo')return loc;
   if(loc==='SEM LOCAL')return 'SEM LOCAL';
   var m=loc.match(/^(\d{1,2}[A-Z]?)/i);if(m)return m[1].toUpperCase();
   var areas=['LOTE','DEMO','CAP','PNEU','BALCÃO','BALCAO','ARMARIO','ARMÁRIO','CORREDOR','VITRINE'];
@@ -1336,7 +1363,7 @@ function abrirContLoc(loc,numCont,conferente){
     itens[cod]={qtd:null,desc:(base[cod]&&base[cod].desc)||'',saldo:p.saldo,loc:loc,extra:false,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
     ordem.push(cod);
   }
-  db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
+  db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',porTipo:locModoAtual==='tipo',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
   saveDB();cur=db.c.length-1;abrirContLocTela();
 }
 
@@ -1840,16 +1867,16 @@ function enviarContagem(){
 }
 
 // ===== BASES REMOTAS (planilha entra pelo dashboard; coletora só baixa) =====
-var DKM='inv_q900_diaria_base_meta',LKM='inv_q900_loc_base_meta';
+var DKM='inv_q900_diaria_base_meta',LKM='inv_q900_loc_base_meta',TKM='inv_q900_tipo_base_meta';
 function _metaBaseTxt(meta){
   if(!meta)return '';
   var d=meta.enviado_em?new Date(meta.enviado_em):null;
   return 'Base de '+(d&&!isNaN(d)?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'?')+(meta.por?' · '+meta.por:'')+' · '+meta.n+' peças';
 }
 function _setBaseMetaUI(tipo){
-  var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:LKM))}catch(e){}
+  var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:tipo==='tipo'?TKM:LKM))}catch(e){}
   var el=document.getElementById(tipo==='diaria'?'diariaBaseMeta':'locBaseMeta');
-  if(el&&meta)el.textContent=_metaBaseTxt(meta);
+  el&&(el.textContent=meta?_metaBaseTxt(meta):'A planilha é enviada pelo computador — aqui só bipa');
 }
 function buscarBaseRemota(tipo){
   if(!INV_API_URL){toast('Backend não configurado');return}
@@ -1867,19 +1894,22 @@ function buscarBaseRemota(tipo){
       toast('📊 Base diária: '+diariaBase.length+' peças');
       abrirDiaria();
     }else{
+      var chave=tipo==='tipo'?'tipo':'loc';
       var pecas={},locacoes={};
       j.pecas.forEach(function(pc){
-        var cod=String(pc.codigo),loc=pc.loc||'SEM LOCAL';
+        var cod=String(pc.codigo),loc=String(pc[chave]||(tipo==='tipo'?'SEM TIPO':'SEM LOCAL'));
         pecas[cod]={loc:loc,saldo:Number(pc.saldo)||0,curva:pc.curva||'',marca:pc.marca||'',ultEntrada:pc.ultEntrada||'',ultSaida:pc.ultSaida||''};
         if(!locacoes[loc])locacoes[loc]=[];
         locacoes[loc].push(cod);
+        if(pc.desc){if(!base[cod])base[cod]={desc:pc.desc,loc:pc.loc||''};else if(!base[cod].desc)base[cod].desc=pc.desc}
       });
+      locModoAtual=(tipo==='tipo')?'tipo':'locacao';
       locBase={pecas:pecas,locacoes:locacoes,total:j.pecas.length};saveLocBase();
-      for(var cod2 in pecas){if(!base[cod2])base[cod2]={desc:'',loc:pecas[cod2].loc};else base[cod2].loc=pecas[cod2].loc}
+      if(tipo==='locacao'){for(var cod2 in pecas){if(!base[cod2])base[cod2]={desc:'',loc:pecas[cod2].loc};else base[cod2].loc=pecas[cod2].loc}}
       saveBase();
-      try{localStorage.setItem(LKM,JSON.stringify(j.meta||{n:j.pecas.length}))}catch(e){}
-      toast('📍 Base de locação: '+j.pecas.length+' peças');
-      abrirLocacao();
+      try{localStorage.setItem(tipo==='tipo'?TKM:LKM,JSON.stringify(j.meta||{n:j.pecas.length}))}catch(e){}
+      toast((tipo==='tipo'?'🏷️ Base por tipo: ':'📍 Base de locação: ')+j.pecas.length+' peças');
+      if(tipo==='tipo')abrirTipo();else abrirLocacao();
     }
   }).catch(function(){toast('Falha ao buscar — tente de novo')});
 }

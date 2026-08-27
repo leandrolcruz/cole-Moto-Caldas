@@ -22,7 +22,8 @@ var ABA_ITENS = 'itens';
 var BASES = {
   diaria:  {aba: 'base_diaria',  cab: ['codigo', 'desc', 'loc', 'saldo', 'qtdMov']},
   locacao: {aba: 'base_locacao', cab: ['codigo', 'loc', 'saldo', 'curva', 'marca',
-                                       'ultEntrada', 'ultSaida']}
+                                       'ultEntrada', 'ultSaida']},
+  tipo:    {aba: 'base_tipo',    cab: ['codigo', 'desc', 'tipo', 'loc', 'saldo']}
 };
 var ABA_BASES_META = 'bases_meta';
 var CAB_BASES_META = ['tipo', 'enviado_em', 'por', 'n_pecas'];
@@ -164,7 +165,8 @@ function doGet(e) {
   if (p.action === 'getBases') {
     if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
     return _json({ok: true, bases: {diaria: _metaBase('diaria'),
-                                    locacao: _metaBase('locacao')}});
+                                    locacao: _metaBase('locacao'),
+                                    tipo: _metaBase('tipo')}});
   }
   if (!p.senha || p.senha !== _segredo('SENHA')) {
     return _json({ok: false, erro: 'senha inválida'});
