@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v11</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v12</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -1783,10 +1783,51 @@ function limparCatalogo(){
   });
 }
 
+// ===== CATÁLOGO EMBUTIDO (auto-download do GitHub Pages) =====
+var CATVK='inv_q900_cat_versao_remota';
+function autoAtualizarCatalogo(){
+  if(!navigator.onLine)return;
+  fetch('catalogo.meta.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(meta){
+    if(!meta||!meta.versao)return;
+    var atual=localStorage.getItem(CATVK);
+    contarCatalogo(function(n){
+      if(meta.versao===atual&&n>0)return;
+      toast('Baixando catálogo '+meta.versao+'...');
+      fetch('catalogo.csv',{cache:'no-store'}).then(function(r){return r.text()}).then(function(txt){
+        var linhas=txt.split('\n');
+        if(linhas.length<1000)return; // download suspeito — não mexe no que está
+        abrirCatDB(function(db2){
+          var tx=db2.transaction('pecas','readwrite');
+          var store=tx.objectStore('pecas');
+          store.clear();
+          var count=0,hif={};
+          for(var i=0;i<linhas.length;i++){
+            var l=linhas[i];if(!l)continue;
+            var p1=l.indexOf(';'),p2=l.lastIndexOf(';');
+            if(p1<1||p2<=p1)continue;
+            var cod=l.substring(0,p1).trim();
+            if(!cod||cod.length<3)continue;
+            store.put({desc:l.substring(p1+1,p2).trim(),loc:l.substring(p2+1).trim()},cod);
+            count++;if(cod.indexOf('-')!==-1)hif[cod]=1;
+          }
+          tx.oncomplete=function(){
+            catCount=count;catHifens=hif;salvarCatHifens();
+            try{localStorage.setItem(CATVK,meta.versao)}catch(e){}
+            toast('📋 Catálogo '+meta.versao+': '+count.toLocaleString()+' peças');
+            renderCatStatus();atualizarBaseComCatalogo();
+          };
+        });
+      }).catch(function(){});
+    });
+  }).catch(function(){});
+}
+setTimeout(autoAtualizarCatalogo,3000);
+
 function renderCatStatus(){
   var el=document.getElementById('catalogoStatus');
   if(!el)return;
-  el.innerHTML='<div class="c-item" style="cursor:default"><div class="c-info"><h4>📋 Catálogo de Peças</h4><p>'+(catCount>0?catCount.toLocaleString()+' peças carregadas':'Nenhum catálogo carregado')+'</p></div><div class="c-meta" style="display:flex;gap:6px">'+
+  var catV=localStorage.getItem(CATVK);
+  el.innerHTML='<div class="c-item" style="cursor:default"><div class="c-info"><h4>📋 Catálogo de Peças</h4><p>'+(catCount>0?catCount.toLocaleString()+' peças carregadas'+(catV?' · '+catV:''):'Nenhum catálogo carregado')+'</p></div><div class="c-meta" style="display:flex;gap:6px">'+
     '<button class="btn btn-sm btn-bl" onclick="importarCatalogo()">'+(catCount>0?'Atualizar':'Carregar')+'</button>'+
     ''+
     (catCount>0?'<button class="btn btn-sm btn-dg" onclick="limparCatalogo()">Limpar</button>':'')+
