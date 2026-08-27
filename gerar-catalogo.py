@@ -15,7 +15,8 @@ import csv, json, re, sys, datetime, os
 if len(sys.argv) < 2:
     sys.exit("uso: gerar-catalogo.py <listagem.csv> [versao]")
 src = sys.argv[1]
-versao = sys.argv[2] if len(sys.argv) > 2 else datetime.date.today().isoformat()
+versao = (sys.argv[2] if len(sys.argv) > 2
+          else datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
 dest_dir = os.path.dirname(os.path.abspath(__file__))
 
 pecas = {}
