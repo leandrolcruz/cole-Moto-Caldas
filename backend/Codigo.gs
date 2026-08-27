@@ -18,6 +18,14 @@
 
 var ABA_CONTAGENS = 'contagens';
 var ABA_ITENS = 'itens';
+// Bases de contagem (planilha sobe pelo dashboard; coletora só baixa)
+var BASES = {
+  diaria:  {aba: 'base_diaria',  cab: ['codigo', 'desc', 'loc', 'saldo', 'qtdMov']},
+  locacao: {aba: 'base_locacao', cab: ['codigo', 'loc', 'saldo', 'curva', 'marca',
+                                       'ultEntrada', 'ultSaida']}
+};
+var ABA_BASES_META = 'bases_meta';
+var CAB_BASES_META = ['tipo', 'enviado_em', 'por', 'n_pecas'];
 var CAB_CONTAGENS = ['id', 'recebido_em', 'origem', 'modo', 'nome',
                      'num_contagem', 'conferente', 'data_app', 'status',
                      'locacao', 'total_itens', 'total_bipes', 'divergencias'];
@@ -54,6 +62,7 @@ function doPost(e) {
   lock.waitLock(30000);
   try {
     var body = JSON.parse(e.postData.contents);
+    if (body.action === 'upload_base') return _uploadBase(body);
     if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
@@ -105,9 +114,58 @@ function _apagarContagem(shC, shI, id) {
   }
 }
 
+function _autorizado(p) {
+  return (p.senha && p.senha === _segredo('SENHA')) ||
+         (p.token && p.token === _segredo('TOKEN_ENVIO'));
+}
+
+function _uploadBase(body) {
+  if (!_autorizado(body)) return _json({ok: false, erro: 'não autorizado'});
+  var cfg = BASES[body.tipo];
+  if (!cfg || !body.pecas || !body.pecas.length) {
+    return _json({ok: false, erro: 'base inválida'});
+  }
+  var sh = _aba(cfg.aba, cfg.cab);
+  sh.clearContents();
+  sh.appendRow(cfg.cab);
+  var linhas = body.pecas.map(function (pc) {
+    return cfg.cab.map(function (c) {
+      var v = pc[c];
+      return (v === undefined || v === null) ? '' : v;
+    });
+  });
+  sh.getRange(2, 1, linhas.length, cfg.cab.length).setValues(linhas);
+  var shM = _aba(ABA_BASES_META, CAB_BASES_META);
+  var vals = shM.getDataRange().getValues();
+  for (var i = vals.length - 1; i >= 1; i--) {
+    if (String(vals[i][0]) === body.tipo) shM.deleteRow(i + 1);
+  }
+  shM.appendRow([body.tipo, new Date(), body.por || '', body.pecas.length]);
+  return _json({ok: true, n: body.pecas.length});
+}
+
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === 'ping') return _json({ok: true, servico: 'inventario-mc'});
+  if (p.action === 'getBase') {
+    if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
+    var cfgB = BASES[p.tipo];
+    if (!cfgB) return _json({ok: false, erro: 'tipo inválido'});
+    var shB = _aba(cfgB.aba, cfgB.cab);
+    var valsB = shB.getDataRange().getValues();
+    var pecas = [];
+    for (var b = 1; b < valsB.length; b++) {
+      var pb = {};
+      cfgB.cab.forEach(function (c, k) { pb[c] = valsB[b][k]; });
+      pecas.push(pb);
+    }
+    return _json({ok: true, meta: _metaBase(p.tipo), pecas: pecas});
+  }
+  if (p.action === 'getBases') {
+    if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
+    return _json({ok: true, bases: {diaria: _metaBase('diaria'),
+                                    locacao: _metaBase('locacao')}});
+  }
   if (!p.senha || p.senha !== _segredo('SENHA')) {
     return _json({ok: false, erro: 'senha inválida'});
   }
@@ -135,6 +193,17 @@ function doGet(e) {
     return _json({ok: true, itens: itens});
   }
   return _json({ok: false, erro: 'ação desconhecida'});
+}
+
+function _metaBase(tipo) {
+  var shM = _aba(ABA_BASES_META, CAB_BASES_META);
+  var mv = shM.getDataRange().getValues();
+  for (var j = mv.length - 1; j >= 1; j--) {
+    if (String(mv[j][0]) === tipo) {
+      return {enviado_em: mv[j][1], por: mv[j][2], n: mv[j][3]};
+    }
+  }
+  return null;
 }
 
 /** Rode UMA vez no editor pra conceder as permissões do script. */

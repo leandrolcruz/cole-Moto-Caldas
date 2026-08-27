@@ -205,13 +205,13 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v14</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v15</b> (27/08/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
       <div class="mode-card c-red" onclick="novaLivre()"><div class="ci">🔫</div><div class="mc-text"><h3>Contagem Livre</h3><p>Bipe códigos livremente. Cada bipe = +1 unidade.</p></div></div>
-      <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><div class="mc-text"><h3>Contagem Diária</h3><p>Importe a planilha de saída do Microwork. Confira saldo por localização.</p></div></div>
-      <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Importe planilha de localização. Conte por corredor, estante e prateleira.</p></div></div>
+      <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><div class="mc-text"><h3>Contagem Diária</h3><p>Base vem do dashboard. Confira o saldo por localização.</p></div></div>
+      <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Base vem do dashboard. Conte por corredor, estante e prateleira.</p></div></div>
       <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><div class="mc-text"><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div></div>
     </div>
     <div id="resumoGeral"></div>
@@ -234,21 +234,13 @@
 <div class="screen" id="scrDiariaImp">
   <div class="inv-topbar">
     <button class="back" onclick="goHome()">←</button>
-    <div class="inv-title"><h2>Contagem Diária</h2><p>Importe a planilha de saída de mercadoria</p></div>
+    <div class="inv-title"><h2>Contagem Diária</h2><p>Base vem do dashboard — aqui só bipa</p></div>
   </div>
   <div class="imp-area">
-    <div class="file-drop" onclick="document.getElementById('diariaFile').click()">
-      <div class="icon">📊</div>
-      <p>Toque para selecionar a planilha</p>
-      <small>Excel (.xlsx) — Saída de Mercadoria do Microwork</small>
-    </div>
-    <input type="file" id="diariaFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="processarDiaria(event)">
-    <div class="imp-preview" id="diariaPreview" style="display:none">
-      <div class="ph">
-        <h3 id="diariaCount">0 peças</h3>
-        <button class="btn btn-sm btn-or" onclick="iniciarDiaria()">Iniciar contagem</button>
-      </div>
-      <div id="diariaList" style="max-height:280px;overflow-y:auto"></div>
+    <div class="file-drop" onclick="buscarBaseRemota('diaria')">
+      <div class="icon">☁️</div>
+      <p>Buscar base do dashboard</p>
+      <small id="diariaBaseMeta">A planilha é enviada pelo computador — aqui só bipa</small>
     </div>
     <div id="diariaBaseAtual" style="margin-top:14px"></div>
   </div>
@@ -345,22 +337,13 @@
 <div class="screen" id="scrLocImp">
   <div class="inv-topbar">
     <button class="back" onclick="goHome()">←</button>
-    <div class="inv-title"><h2>Contagem por Locação</h2><p>Importe a planilha de localização</p></div>
+    <div class="inv-title"><h2>Contagem por Locação</h2><p>Base vem do dashboard — aqui só bipa</p></div>
   </div>
   <div class="imp-area">
-    <div class="file-drop" onclick="document.getElementById('locFile').click()">
-      <div class="icon">📍</div>
-      <p>Toque para selecionar a planilha</p>
-      <small>Excel (.xlsx) — Planilha de Localização</small>
-    </div>
-    <input type="file" id="locFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="processarLocacao(event)">
-    <div class="imp-preview" id="locPreview" style="display:none">
-      <div class="ph">
-        <h3 id="locCount">0 peças</h3>
-        <button class="btn btn-sm btn-bl" onclick="salvarBaseLocacao()">Salvar base</button>
-      </div>
-      <div id="locStats" style="margin-bottom:8px"></div>
-      <div id="locList" style="max-height:250px;overflow-y:auto"></div>
+    <div class="file-drop" onclick="buscarBaseRemota('locacao')">
+      <div class="icon">☁️</div>
+      <p>Buscar base do dashboard</p>
+      <small id="locBaseMeta">A planilha é enviada pelo computador — aqui só bipa</small>
     </div>
     <div id="locBaseAtual" style="margin-top:14px"></div>
   </div>
@@ -846,9 +829,9 @@ var diariaBase=null;
 try{var dbStr=localStorage.getItem(DK);if(dbStr)diariaBase=JSON.parse(dbStr)}catch(e){diariaBase=null}
 
 function abrirDiaria(){
-  document.getElementById('diariaPreview').style.display='none';
-  document.getElementById('diariaFile').value='';
   show('scrDiariaImp');
+  _setBaseMetaUI('diaria');
+  if((!diariaBase||!diariaBase.length)&&navigator.onLine)buscarBaseRemota('diaria');
   // Mostrar base já carregada
   var el=document.getElementById('diariaBaseAtual');
   if(diariaBase&&diariaBase.length>0){
@@ -1194,7 +1177,9 @@ function _exportarDiariaFallback(){
 function normalizarLoc(loc){if(!loc)return 'SEM LOCAL';loc=loc.trim().toUpperCase();if(loc===''||loc==='0'||loc==='00'||loc==='[SEM LOCAL]')return 'SEM LOCAL';return loc}
 
 function abrirLocacao(){
-  tmpLoc=[];document.getElementById('locPreview').style.display='none';document.getElementById('locFile').value='';show('scrLocImp');
+  tmpLoc=[];show('scrLocImp');
+  _setBaseMetaUI('locacao');
+  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('locacao');
   var el=document.getElementById('locBaseAtual');
   if(locBase&&locBase.pecas){
     var np=Object.keys(locBase.pecas).length,nl=Object.keys(locBase.locacoes||{}).length;
@@ -1852,6 +1837,51 @@ function enviarContagem(){
     if(j&&j.ok){c.enviadaEm=now();saveDB();toast('☁️ Enviada! '+j.itens+' itens'+(j.divergencias?' · '+j.divergencias+' divergências':''))}
     else{toast('Falha no envio: '+((j&&j.erro)||'?'))}
   }).catch(function(){toast('Falha no envio — tente de novo')});
+}
+
+// ===== BASES REMOTAS (planilha entra pelo dashboard; coletora só baixa) =====
+var DKM='inv_q900_diaria_base_meta',LKM='inv_q900_loc_base_meta';
+function _metaBaseTxt(meta){
+  if(!meta)return '';
+  var d=meta.enviado_em?new Date(meta.enviado_em):null;
+  return 'Base de '+(d&&!isNaN(d)?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'?')+(meta.por?' · '+meta.por:'')+' · '+meta.n+' peças';
+}
+function _setBaseMetaUI(tipo){
+  var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:LKM))}catch(e){}
+  var el=document.getElementById(tipo==='diaria'?'diariaBaseMeta':'locBaseMeta');
+  if(el&&meta)el.textContent=_metaBaseTxt(meta);
+}
+function buscarBaseRemota(tipo){
+  if(!INV_API_URL){toast('Backend não configurado');return}
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  toast('☁️ Buscando base...');
+  fetch(INV_API_URL+'?action=getBase&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
+  .then(function(r){return r.json()}).then(function(j){
+    if(!j.ok){toast('Falha: '+(j.erro||'?'));return}
+    if(!j.pecas||!j.pecas.length){toast('Nenhuma base de '+(tipo==='diaria'?'contagem diária':'locação')+' no dashboard ainda — suba a planilha lá primeiro');return}
+    if(tipo==='diaria'){
+      diariaBase=j.pecas.map(function(pc){return{codigo:String(pc.codigo),desc:pc.desc||'',loc:pc.loc||'',saldo:Number(pc.saldo)||0,qtdMov:pc.qtdMov||0}});
+      tmpDiaria=diariaBase;
+      try{localStorage.setItem(DK,JSON.stringify(diariaBase))}catch(e){}
+      try{localStorage.setItem(DKM,JSON.stringify(j.meta||{n:diariaBase.length}))}catch(e){}
+      toast('📊 Base diária: '+diariaBase.length+' peças');
+      abrirDiaria();
+    }else{
+      var pecas={},locacoes={};
+      j.pecas.forEach(function(pc){
+        var cod=String(pc.codigo),loc=pc.loc||'SEM LOCAL';
+        pecas[cod]={loc:loc,saldo:Number(pc.saldo)||0,curva:pc.curva||'',marca:pc.marca||'',ultEntrada:pc.ultEntrada||'',ultSaida:pc.ultSaida||''};
+        if(!locacoes[loc])locacoes[loc]=[];
+        locacoes[loc].push(cod);
+      });
+      locBase={pecas:pecas,locacoes:locacoes,total:j.pecas.length};saveLocBase();
+      for(var cod2 in pecas){if(!base[cod2])base[cod2]={desc:'',loc:pecas[cod2].loc};else base[cod2].loc=pecas[cod2].loc}
+      saveBase();
+      try{localStorage.setItem(LKM,JSON.stringify(j.meta||{n:j.pecas.length}))}catch(e){}
+      toast('📍 Base de locação: '+j.pecas.length+' peças');
+      abrirLocacao();
+    }
+  }).catch(function(){toast('Falha ao buscar — tente de novo')});
 }
 
 function renderCatStatus(){

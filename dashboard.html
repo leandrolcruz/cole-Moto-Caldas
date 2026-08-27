@@ -60,6 +60,7 @@
   <div class="tabs">
     <div class="tab ativa" id="tabL" onclick="mudarTab('L')">Contagens</div>
     <div class="tab" id="tabC" onclick="mudarTab('C')">1ª × 2ª contagem</div>
+    <div class="tab" id="tabB" onclick="mudarTab('B')">📥 Bases</div>
   </div>
   <div id="paneL"><div class="card"><div id="listaContagens" class="vazio">Carregando…</div></div>
     <div class="card" id="cardDetalhe" style="display:none">
@@ -74,6 +75,24 @@
     <div class="linha"><select id="selPar" onchange="renderComparacao()"></select></div>
     <div style="overflow-x:auto"><div id="compArea" class="vazio">Escolha um par acima.</div></div>
   </div></div>
+  <div id="paneB" style="display:none">
+    <div class="card">
+      <p class="sub" style="margin-bottom:8px">Suba aqui a planilha do Microwork — as coletoras baixam a base sozinhas (não se importa mais planilha no aparelho).</p>
+      <div class="linha"><label style="font-size:13px;color:var(--tx2)">Quem está enviando:</label><input id="inpPor" placeholder="seu nome" style="width:180px"></div>
+    </div>
+    <div class="card">
+      <b>📊 Base da Contagem Diária</b> <span class="sub" style="display:inline">(Saída de Mercadoria)</span>
+      <p class="sub" id="meta-diaria" style="margin:6px 0">…</p>
+      <div class="linha"><input type="file" id="file-diaria" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('diaria')">Enviar base</button></div>
+      <p class="sub" id="st-diaria"></p>
+    </div>
+    <div class="card">
+      <b>📍 Base da Contagem por Locação</b> <span class="sub" style="display:inline">(Planilha de Localização)</span>
+      <p class="sub" id="meta-locacao" style="margin:6px 0">…</p>
+      <div class="linha"><input type="file" id="file-locacao" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('locacao')">Enviar base</button></div>
+      <p class="sub" id="st-locacao"></p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -104,11 +123,12 @@ function testar(){
 }
 function carregar(){api('action=getData').then(function(j){if(j.ok){contagens=j.contagens||[];renderLista()}})}
 function mudarTab(t){
-  document.getElementById('tabL').classList.toggle('ativa',t==='L');
-  document.getElementById('tabC').classList.toggle('ativa',t==='C');
-  document.getElementById('paneL').style.display=t==='L'?'block':'none';
-  document.getElementById('paneC').style.display=t==='C'?'block':'none';
+  ['L','C','B'].forEach(function(x){
+    document.getElementById('tab'+x).classList.toggle('ativa',x===t);
+    document.getElementById('pane'+x).style.display=x===t?'block':'none';
+  });
   if(t==='C')montarPares();
+  if(t==='B'){document.getElementById('inpPor').value=localStorage.getItem('inv_dash_por')||'';renderBases()}
 }
 function fmtData(v){
   if(!v)return'';var d=new Date(v);
@@ -219,6 +239,81 @@ function renderComparacao(){
          '<td>'+(igual?'<span class="dif-ok">OK</span>':'<span class="dif-menos">✗</span>')+'</td></tr>';
     });
     document.getElementById('compArea').innerHTML='<p class="sub">'+cods.length+' códigos · <b style="color:'+(diverg?'var(--dg)':'var(--gn)')+'">'+diverg+' em desacordo</b></p>'+h+'</table>';
+  });
+}
+// ===== BASES (upload da planilha pelo computador) =====
+function normalizarLoc(loc){if(!loc)return 'SEM LOCAL';loc=loc.trim().toUpperCase();if(loc===''||loc==='0'||loc==='00'||loc==='[SEM LOCAL]')return 'SEM LOCAL';return loc}
+function formatarDataXlsx(v){
+  if(!v&&v!==0)return '';
+  if(typeof v==='number'){
+    if(v<1)return '';
+    var d=new Date(Date.UTC(1899,11,30+Math.floor(v)));
+    if(isNaN(d.getTime()))return String(v);
+    var dd=String(d.getUTCDate()).padStart(2,'0'),mm=String(d.getUTCMonth()+1).padStart(2,'0'),yy=d.getUTCFullYear();
+    if(yy<1901)return '';
+    return dd+'/'+mm+'/'+yy;
+  }
+  return String(v).trim();
+}
+function renderBases(){
+  api('action=getBases').then(function(j){
+    if(!j.ok)return;
+    ['diaria','locacao'].forEach(function(t){
+      var m=j.bases[t];
+      document.getElementById('meta-'+t).textContent=m?('Base atual: '+fmtData(m.enviado_em)+' · '+m.n+' peças'+(m.por?' · enviada por '+m.por:'')):'Nenhuma base enviada ainda.';
+    });
+  });
+}
+function lerPlanilha(file,cb){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    cb(XLSX.utils.sheet_to_json(ws,{defval:'',raw:true}));
+  };
+  reader.readAsArrayBuffer(file);
+}
+function uploadBase(tipo){
+  var inp=document.getElementById('file-'+tipo);
+  var file=inp.files[0];if(!file){alert('Escolha a planilha primeiro');return}
+  var por=document.getElementById('inpPor').value.trim();
+  localStorage.setItem('inv_dash_por',por);
+  var st=document.getElementById('st-'+tipo);st.textContent='Lendo planilha…';
+  lerPlanilha(file,function(json){
+    var pecas=[],vistos={};
+    for(var i=0;i<json.length;i++){
+      var r=json[i];
+      if(tipo==='diaria'){
+        var cod=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||r['Codigo']||'').trim();
+        if(!cod)continue;
+        var merc=String(r['Mercadoria']||r['Descrição']||r['Descricao']||'').trim();
+        var loc=String(r['Localização']||r['Localizacao']||r['Local']||r['Local/Grade']||'').trim();
+        var qtdMov=r['Quantidade']||r['Qtd']||0;
+        var saldoRaw=r['Saldo Disponível Atual']||r['Saldo Disponível']||r['Saldo Contábil']||r['Saldo Contabil']||r['Saldo']||0;
+        var saldo=typeof saldoRaw==='number'?Math.round(saldoRaw):parseInt(String(saldoRaw).replace(/\./g,'').replace(',','.'))||0;
+        if(vistos[cod]!==undefined){if(saldo>pecas[vistos[cod]].saldo)pecas[vistos[cod]].saldo=saldo}
+        else{vistos[cod]=pecas.length;pecas.push({codigo:cod,desc:merc,loc:loc,saldo:saldo,qtdMov:qtdMov})}
+      }else{
+        var cod2=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
+        var loc2=normalizarLoc(String(r['Localização']||r['Localizacao']||r['Local']||r['localização']||''));
+        var sRaw=String(r['Saldo Disponível']||r['Saldo Disponivel']||r['Saldo']||'0');
+        var s2=Math.round(parseFloat(sRaw.replace(/\./g,'').replace(',','.'))||0);
+        var curva=String(r['ABCD/XYZ']||r['Curva']||'').trim();
+        var marca=String(r['Marca']||'').trim();
+        if(cod2&&cod2.length>=3&&s2>0)pecas.push({codigo:cod2,loc:loc2,saldo:s2,curva:curva,marca:marca,
+          ultEntrada:formatarDataXlsx(r['Última Entrada']||r['Ultima Entrada']||''),
+          ultSaida:formatarDataXlsx(r['Última Saída']||r['Ultima Saida']||'')});
+      }
+    }
+    if(tipo==='diaria')pecas.sort(function(a,b){return String(a.loc).localeCompare(String(b.loc))});
+    if(!pecas.length){st.textContent='Nenhuma peça reconhecida — confira as colunas da planilha.';return}
+    st.textContent='Enviando '+pecas.length+' peças…';
+    fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'upload_base',senha:senha(),tipo:tipo,por:por,pecas:pecas})})
+    .then(function(r){return r.json()}).then(function(j){
+      if(j.ok){st.textContent='✅ Base enviada: '+j.n+' peças. As coletoras já podem buscar.';inp.value='';renderBases()}
+      else st.textContent='Falha: '+(j.erro||'?');
+    }).catch(function(){st.textContent='Falha ao enviar — tente de novo.'});
   });
 }
 // boot
