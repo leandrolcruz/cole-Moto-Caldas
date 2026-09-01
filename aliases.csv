@@ -1,0 +1,4 @@
+# De-para: código de barras do FORNECEDOR (EAN) -> código interno
+# Uso: quando a etiqueta bipada é a do fabricante (ex. Pirelli) e não a interna.
+# formato: EAN;CODIGO_INTERNO;nota (a nota é ignorada pelo app)
+8019227380385;44711K1ZB01;Pirelli Diablo Rosso Scooter 110/70-14 diant PCX 160

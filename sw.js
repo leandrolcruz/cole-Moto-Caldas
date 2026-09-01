@@ -1,4 +1,4 @@
-var CACHE_NAME = 'inv-motocaldas-v16';
+var CACHE_NAME = 'inv-motocaldas-v17';
 var urlsToCache = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ self.addEventListener('activate', function(event) {
 
 self.addEventListener('fetch', function(event) {
   // Catálogo embutido: sempre da rede (o dado vive no IndexedDB, não no cache)
-  if (event.request.url.indexOf('catalogo.') !== -1) {
+  if (event.request.url.indexOf('catalogo.') !== -1 || event.request.url.indexOf('aliases.csv') !== -1) {
     event.respondWith(fetch(event.request));
     return;
   }

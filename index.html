@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v16</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v17</b> (01/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -672,6 +672,30 @@ function reconstruirCatHifens(){
 }
 reconstruirCatHifens();
 
+
+// De-para EAN (código de barras do fornecedor) -> código interno (aliases.csv)
+var ALIK='inv_q900_aliases';
+var aliases={};
+try{aliases=JSON.parse(localStorage.getItem(ALIK))||{}}catch(e){aliases={}}
+function carregarAliases(){
+  if(!navigator.onLine)return;
+  fetch('aliases.csv',{cache:'no-store'}).then(function(r){return r.text()}).then(function(txt){
+    var m={},ls=txt.split('\n');
+    for(var i=0;i<ls.length;i++){
+      var l=ls[i].trim();
+      if(!l||l.charAt(0)==='#')continue;
+      var p=l.split(';');
+      if(p.length>=2&&p[0].trim()&&p[1].trim())m[p[0].trim()]=p[1].trim();
+    }
+    aliases=m;try{localStorage.setItem(ALIK,JSON.stringify(m))}catch(e){}
+  }).catch(function(){});
+}
+carregarAliases();
+function resolverAlias(cod){
+  if(cod&&aliases[cod]){toast('🔁 '+cod+' → '+aliases[cod]+' (cód. de barras do fornecedor)');return aliases[cod]}
+  return cod;
+}
+
 // Verificar se código existe no catálogo (134K peças)
 function verificarCatalogo(cod){
   buscarCatalogo(cod,function(res){
@@ -805,7 +829,7 @@ scanL.addEventListener('input',function(){if(timer)clearTimeout(timer);if(scanL.
 function bipeLivre(){
   if(cur===null)return;var c=db.c[cur];
   if(c.status==='ok'){toast('Contagem concluída');scanL.value='';return}
-  var cod=scanL.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
+  var cod=resolverAlias(scanL.value.replace(/[\t\n\r]/g,'').trim());if(!cod)return;
   var fb=document.getElementById('fbLivre');
   if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanL.value='';safeFocus(scanL);setTimeout(function(){fb.style.color=''},3000);return}
   c.totalBipes++;
@@ -950,7 +974,7 @@ scanD.addEventListener('input',function(){if(timerD)clearTimeout(timerD);if(scan
 
 function bipeDiaria(){
   if(cur===null)return;var c=db.c[cur];
-  var cod=scanD.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
+  var cod=resolverAlias(scanD.value.replace(/[\t\n\r]/g,'').trim());if(!cod)return;
   scanD.value='';var fb=document.getElementById('fbDiaria');
   if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanD);setTimeout(function(){fb.style.color=''},3000);return}
   c.totalBipes++;saveDB();
@@ -1410,7 +1434,7 @@ scanLC.addEventListener('input',function(){if(timerLC)clearTimeout(timerLC);if(s
 
 function bipeLoc(){
   if(cur===null)return;var c=db.c[cur];
-  var cod=scanLC.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
+  var cod=resolverAlias(scanLC.value.replace(/[\t\n\r]/g,'').trim());if(!cod)return;
   scanLC.value='';var fb=document.getElementById('fbLoc');
   if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Etiqueta fora do padrão');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);return}
   c.totalBipes++;saveDB();
@@ -2090,7 +2114,7 @@ scanR.addEventListener('input',function(){if(timerR)clearTimeout(timerR);if(scan
 function bipeRoupa(){
   if(cur===null)return;var c=db.c[cur];
   if(c.status==='ok'){toast('Contagem concluída');scanR.value='';return}
-  var cod=scanR.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
+  var cod=resolverAlias(scanR.value.replace(/[\t\n\r]/g,'').trim());if(!cod)return;
   scanR.value='';var fb=document.getElementById('fbRoupa');
   if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanR);setTimeout(function(){fb.style.color=''},3000);return}
   // Abrir modal para cor e tamanho
