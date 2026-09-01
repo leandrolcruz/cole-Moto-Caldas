@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v16</b> (27/08/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v18</b> (01/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -213,6 +213,7 @@
       <div class="mode-card c-or" onclick="abrirDiaria()"><div class="ci">📊</div><div class="mc-text"><h3>Contagem Diária</h3><p>Base vem do dashboard. Confira o saldo por localização.</p></div></div>
       <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Base vem do dashboard. Conte por corredor, estante e prateleira.</p></div></div>
       <div class="mode-card c-gn" onclick="abrirTipo()"><div class="ci">🏷️</div><div class="mc-text"><h3>Contagem por Tipo</h3><p>Base vem do dashboard. Conte por tipo de mercadoria (capacetes, pneus, boutique...).</p></div></div>
+            <div class="mode-card c-red" onclick="abrirCapacetes()"><div class="ci">🪖</div><div class="mc-text"><h3>Contagem de Capacetes</h3><p>Base vem do dashboard (todos os capacetes, com e sem saldo). Ajuda a AGRUPAR: código repetido fora de hora = capacete no lugar errado.</p></div></div>
       <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><div class="mc-text"><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div></div>
     </div>
     <div id="resumoGeral"></div>
@@ -518,6 +519,12 @@
   <div class="ma"><button class="btn btn-sf" onclick="closeM('modLocQtd')">Cancelar</button><button class="btn btn-bl" onclick="salvarLocQtd()">Salvar</button></div>
 </div></div>
 
+<div class="modal-ov" id="modCapOrg"><div class="modal">
+  <h3>🪖 Capacete fora do lugar</h3>
+  <p id="modCapOrgTxt" style="font-size:13px;line-height:1.45;margin-bottom:8px"></p>
+  <p style="font-size:12px;color:var(--or);margin-bottom:16px">Toque em "JÁ LEVEI PRO GRUPO" somente DEPOIS de juntar este capacete aos iguais.</p>
+  <div class="ma"><button class="btn btn-sf" onclick="cancelarCapOrg()">Descartar bipe</button><button class="btn btn-ac" onclick="confirmarCapOrg()">✔ JÁ LEVEI PRO GRUPO</button></div>
+</div></div>
 <div class="modal-ov" id="modConcluirLoc"><div class="modal">
   <h3>Concluir contagem?</h3>
   <p style="font-size:13px;color:var(--yl);margin-bottom:6px;font-weight:600" id="modConcluirLocAviso"></p>
@@ -591,7 +598,7 @@
 
 <script>
 var DB='inv_q900',BK='inv_q900_base',LK='inv_q900_loc_base';
-var TK='inv_q900_tipo_base',locModoAtual='locacao';
+var TK='inv_q900_tipo_base',CK='inv_q900_cap_base',CKM='inv_q900_cap_base_meta',tmpCapCod='',locModoAtual='locacao';
 var db=loadDB(),base=loadBase(),cur=null,timer=null,tmpDiaria=[],locBase=loadLocBase(),tmpLoc=[];
 var ultimoBipe=null,locAtual='',tmpOutraCod='',codDiariaAtual='',delIdx=-1,pendingLoc='',pendingNum=0,tmpLocWb=null,tmpLocBytes=null;
 
@@ -600,7 +607,7 @@ function saveDB(){localStorage.setItem(DB,JSON.stringify(db))}
 function loadBase(){try{return JSON.parse(localStorage.getItem(BK))||{};}catch(e){return{};}}
 function saveBase(){localStorage.setItem(BK,JSON.stringify(base))}
 function loadLocBase(){try{return JSON.parse(localStorage.getItem(LK))||null;}catch(e){return null;}}
-function saveLocBase(){localStorage.setItem(locModoAtual==='tipo'?TK:LK,JSON.stringify(locBase))}
+function saveLocBase(){localStorage.setItem(locModoAtual==='tipo'?TK:locModoAtual==='capacetes'?CK:LK,JSON.stringify(locBase))}
 
 function show(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});document.getElementById(id).classList.add('active')}
 function goHome(){show('scrHome');renderHome()}
@@ -727,7 +734,7 @@ function renderHome(){
   var h='';
   for(var i=n-1;i>=0;i--){
     var c=db.c[i],ic=Object.keys(c.itens).length,sc=c.status==='ok'?'sts-ok':'sts-and',st=c.status==='ok'?'Concluída':'Em andamento';
-    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porTipo?'🏷️ ':'📍 ')+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
+    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porCapacete?'🪖 ':c.porTipo?'🏷️ ':'📍 ')+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
     var conf=c.conferente?' • '+c.conferente:'';
     h+='<div class="c-item"><div class="c-info" onclick="abrirC('+i+')"><h4>'+c.nome+'</h4><p>'+tipo+conf+' • '+c.data+' • '+c.totalBipes+' bipes</p></div><div class="c-meta"><div class="cnt" onclick="abrirC('+i+')">'+ic+'</div><div class="sts '+sc+'" onclick="abrirC('+i+')">'+st+'</div><button class="del-btn" onclick="event.stopPropagation();delContagem('+i+')">🗑</button></div></div>';
   }
@@ -996,8 +1003,8 @@ function abrirC(idx){
   cur=idx;var c=db.c[cur];
   if(c.modo==='locacao'){
     // restaurar o contexto certo (base por tipo × por locação)
-    locModoAtual=c.porTipo?'tipo':'locacao';
-    try{locBase=JSON.parse(localStorage.getItem(c.porTipo?TK:LK))||locBase}catch(e){}
+    locModoAtual=c.porCapacete?'capacetes':c.porTipo?'tipo':'locacao';
+    try{locBase=JSON.parse(localStorage.getItem(c.porCapacete?CK:c.porTipo?TK:LK))||locBase}catch(e){}
     locAtual=c.locacao;
     if(c.status==='ok'){abrirLocRel(idx);return}
     abrirContLocTela();return;
@@ -1198,17 +1205,27 @@ function abrirTipo(){
   if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('tipo');
   _renderLocBaseCard();
 }
-function buscarBaseLocOuTipo(){buscarBaseRemota(locModoAtual==='tipo'?'tipo':'locacao')}
+function buscarBaseLocOuTipo(){buscarBaseRemota(locModoAtual==='tipo'?'tipo':locModoAtual==='capacetes'?'capacetes':'locacao')}
+function abrirCapacetes(){
+  locModoAtual='capacetes';
+  try{locBase=JSON.parse(localStorage.getItem(CK))||null}catch(e){locBase=null}
+  document.getElementById('locImpTit').textContent='Contagem de Capacetes';
+  tmpLoc=[];show('scrLocImp');
+  _setBaseMetaUI('capacetes');
+  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('capacetes');
+  _renderLocBaseCard();
+}
+
 function limparBaseLoc(){
-  locBase=null;localStorage.removeItem(locModoAtual==='tipo'?TK:LK);
+  locBase=null;localStorage.removeItem(locModoAtual==='tipo'?TK:locModoAtual==='capacetes'?CK:LK);
   toast('Base removida');
-  if(locModoAtual==='tipo')abrirTipo();else abrirLocacao();
+  if(locModoAtual==='tipo')abrirTipo();else if(locModoAtual==='capacetes')abrirCapacetes();else abrirLocacao();
 }
 function _renderLocBaseCard(){
   var el=document.getElementById('locBaseAtual');
   if(locBase&&locBase.pecas){
     var np=Object.keys(locBase.pecas).length,nl=Object.keys(locBase.locacoes||{}).length;
-    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+' peças • '+nl+' '+(locModoAtual==='tipo'?'tipos':'locações')+'</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="limparBaseLoc()">Limpar</button></div></div>';
+    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+' peças • '+nl+' '+(locModoAtual==='tipo'?'tipos':locModoAtual==='capacetes'?'grupo':'locações')+'</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="limparBaseLoc()">Limpar</button></div></div>';
   }else{el.innerHTML=''}
 }
 
@@ -1267,13 +1284,13 @@ function salvarBaseLocacao(){
 // ===== LOCAÇÃO: SELECIONAR =====
 function iniciarSelLoc(){
   if(!locBase||!locBase.locacoes){toast('Carregue a base primeiro');return}
-  document.getElementById('locSelTit').textContent=locModoAtual==='tipo'?'Escolher Tipo':'Escolher Locação';
+  document.getElementById('locSelTit').textContent=locModoAtual==='capacetes'?'Capacetes':locModoAtual==='tipo'?'Escolher Tipo':'Escolher Locação';
   show('scrLocSel');
   document.getElementById('locSelSub').textContent=Object.keys(locBase.pecas).length+' peças • '+Object.keys(locBase.locacoes).length+' locações';
   document.getElementById('locSearchInput').value='';renderLocGroups('');
 }
 function extrairGrupo(loc){
-  if(locModoAtual==='tipo')return loc;
+  if(locModoAtual==='tipo'||locModoAtual==='capacetes')return loc;
   if(loc==='SEM LOCAL')return 'SEM LOCAL';
   var m=loc.match(/^(\d{1,2}[A-Z]?)/i);if(m)return m[1].toUpperCase();
   var areas=['LOTE','DEMO','CAP','PNEU','BALCÃO','BALCAO','ARMARIO','ARMÁRIO','CORREDOR','VITRINE'];
@@ -1363,13 +1380,13 @@ function abrirContLoc(loc,numCont,conferente){
     itens[cod]={qtd:null,desc:(base[cod]&&base[cod].desc)||'',saldo:p.saldo,loc:loc,extra:false,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
     ordem.push(cod);
   }
-  db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',porTipo:locModoAtual==='tipo',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
+  db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',porTipo:locModoAtual==='tipo',porCapacete:locModoAtual==='capacetes',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
   saveDB();cur=db.c.length-1;abrirContLocTela();
 }
 
 function abrirContLocTela(){
   var c=db.c[cur];show('scrLocCont');
-  document.getElementById('locContTit').textContent='📍 '+c.locacao;
+  document.getElementById('locContTit').textContent=(c.porCapacete?'🪖 ':'📍 ')+c.locacao;
   document.getElementById('locContSub').textContent=(c.numContagem===2?'2ª':'1ª')+' contagem • '+c.conferente;
   hideLocAlerts();renderLocCont();
   var inp=document.getElementById('scanLoc');inp.value='';setTimeout(function(){safeFocus(inp)},200);
@@ -1416,8 +1433,10 @@ function bipeLoc(){
   c.totalBipes++;saveDB();
   // 1. Peça desta locação
   if(c.itens[cod]&&!c.itens[cod].extra){
+    if(c.porCapacete&&c.itens[cod].qtd!==null&&c.ultimoCodCap!==cod){tmpCapCod=cod;document.getElementById('modCapOrgTxt').textContent='O código '+cod+' JÁ FOI CONTADO. Este capacete está fora do grupo dele — leve-o para junto dos iguais AGORA.';somAlerta();openM('modCapOrg');return}
     if(c.itens[cod].qtd!==null){ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};c.itens[cod].qtd++;fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao()}
     else{ultimoBipe={modo:'locacao',cod:cod,qtdAntes:null,era_novo:false};c.itens[cod].qtd=1;fb.textContent='✓ '+cod+' = 1';fb.className='scan-fb fb-new';somConfirmacao()}
+    if(c.porCapacete)c.ultimoCodCap=cod;
     saveDB();renderLocCont(cod);safeFocus(scanLC);
     buscarCatalogo(cod,function(res){
       if(!res)return;
@@ -1445,6 +1464,16 @@ function bipeLoc(){
   fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);
 }
 
+function confirmarCapOrg(){
+  var c=db.c[cur],cod=tmpCapCod;closeM('modCapOrg');
+  c.reorg=(c.reorg||0)+1;c.itens[cod].reorg=(c.itens[cod].reorg||0)+1;
+  ultimoBipe={modo:'locacao',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};
+  c.itens[cod].qtd++;c.ultimoCodCap=cod;saveDB();
+  var fb=document.getElementById('fbLoc');fb.textContent='✓ +1 (reorganizado) → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';
+  showLocAlert('info','Reorganizados nesta contagem: '+c.reorg);
+  renderLocCont(cod);setTimeout(function(){safeFocus(scanLC)},200);
+}
+function cancelarCapOrg(){closeM('modCapOrg');var fb=document.getElementById('fbLoc');fb.textContent='✗ bipe descartado';fb.className='scan-fb';renderLocCont();setTimeout(function(){safeFocus(scanLC)},200)}
 function registrarOutraLoc(){
   var c=db.c[cur],cod=tmpOutraCod,qtd=parseInt(document.getElementById('modLocOutraQtd').value)||1;
   var p=locBase.pecas[cod];
@@ -1484,7 +1513,7 @@ function confirmarConcluirLoc(){
 // ===== LOCAÇÃO: RELATÓRIO =====
 function abrirLocRel(idx){
   cur=idx;var c=db.c[idx];show('scrLocRel');
-  document.getElementById('locRelSub').textContent=c.nome+' — '+c.conferente+' — '+c.data;
+  document.getElementById('locRelSub').textContent=c.nome+' — '+c.conferente+' — '+c.data+(c.reorg?' — 🔁 '+c.reorg+' reorganizado'+(c.reorg>1?'s':''):'');
   var total=0,ok=0,div=0;var el=document.getElementById('locRelItems');
   var h='<div class="item-row item-hdr"><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span><span class="item-saldo">Dif.</span></div>';
   for(var i=0;i<c.ordem.length;i++){
@@ -1874,7 +1903,7 @@ function _metaBaseTxt(meta){
   return 'Base de '+(d&&!isNaN(d)?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'?')+(meta.por?' · '+meta.por:'')+' · '+meta.n+' peças';
 }
 function _setBaseMetaUI(tipo){
-  var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:tipo==='tipo'?TKM:LKM))}catch(e){}
+  var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:tipo==='tipo'?TKM:tipo==='capacetes'?CKM:LKM))}catch(e){}
   var el=document.getElementById(tipo==='diaria'?'diariaBaseMeta':'locBaseMeta');
   el&&(el.textContent=meta?_metaBaseTxt(meta):'A planilha é enviada pelo computador — aqui só bipa');
 }
@@ -1897,19 +1926,19 @@ function buscarBaseRemota(tipo){
       var chave=tipo==='tipo'?'tipo':'loc';
       var pecas={},locacoes={};
       j.pecas.forEach(function(pc){
-        var cod=String(pc.codigo),loc=String(pc[chave]||(tipo==='tipo'?'SEM TIPO':'SEM LOCAL'));
+        var cod=String(pc.codigo),loc=tipo==='capacetes'?'TODOS OS CAPACETES':String(pc[chave]||(tipo==='tipo'?'SEM TIPO':'SEM LOCAL'));
         pecas[cod]={loc:loc,saldo:Number(pc.saldo)||0,curva:pc.curva||'',marca:pc.marca||'',ultEntrada:pc.ultEntrada||'',ultSaida:pc.ultSaida||''};
         if(!locacoes[loc])locacoes[loc]=[];
         locacoes[loc].push(cod);
         if(pc.desc){if(!base[cod])base[cod]={desc:pc.desc,loc:pc.loc||''};else if(!base[cod].desc)base[cod].desc=pc.desc}
       });
-      locModoAtual=(tipo==='tipo')?'tipo':'locacao';
+      locModoAtual=(tipo==='tipo')?'tipo':(tipo==='capacetes')?'capacetes':'locacao';
       locBase={pecas:pecas,locacoes:locacoes,total:j.pecas.length};saveLocBase();
       if(tipo==='locacao'){for(var cod2 in pecas){if(!base[cod2])base[cod2]={desc:'',loc:pecas[cod2].loc};else base[cod2].loc=pecas[cod2].loc}}
       saveBase();
-      try{localStorage.setItem(tipo==='tipo'?TKM:LKM,JSON.stringify(j.meta||{n:j.pecas.length}))}catch(e){}
-      toast((tipo==='tipo'?'🏷️ Base por tipo: ':'📍 Base de locação: ')+j.pecas.length+' peças');
-      if(tipo==='tipo')abrirTipo();else abrirLocacao();
+      try{localStorage.setItem(tipo==='tipo'?TKM:tipo==='capacetes'?CKM:LKM,JSON.stringify(j.meta||{n:j.pecas.length}))}catch(e){}
+      toast((tipo==='tipo'?'🏷️ Base por tipo: ':tipo==='capacetes'?'🪖 Base de capacetes: ':'📍 Base de locação: ')+j.pecas.length+' peças');
+      if(tipo==='tipo')abrirTipo();else if(tipo==='capacetes')abrirCapacetes();else abrirLocacao();
     }
   }).catch(function(){toast('Falha ao buscar — tente de novo')});
 }

@@ -98,6 +98,12 @@
       <div class="linha"><input type="file" id="file-tipo" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('tipo')">Enviar base</button></div>
       <p class="sub" id="st-tipo"></p>
     </div>
+    <div class="card">
+      <b>🪖 Base da Contagem de Capacetes</b> <span class="sub" style="display:inline">(Listagem de Mercadoria — filtra capacetes dos tipos CAPACETES+BOUTIQUE, inclui saldo zero)</span>
+      <p class="sub" id="meta-capacetes" style="margin:6px 0">…</p>
+      <div class="linha"><input type="file" id="file-capacetes" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('capacetes')">Enviar base</button></div>
+      <p class="sub" id="st-capacetes"></p>
+    </div>
   </div>
 </div>
 
@@ -264,7 +270,7 @@ function formatarDataXlsx(v){
 function renderBases(){
   api('action=getBases').then(function(j){
     if(!j.ok)return;
-    ['diaria','locacao','tipo'].forEach(function(t){
+    ['diaria','locacao','tipo','capacetes'].forEach(function(t){
       var m=j.bases[t];
       document.getElementById('meta-'+t).textContent=m?('Base atual: '+fmtData(m.enviado_em)+' · '+m.n+' peças'+(m.por?' · enviada por '+m.por:'')):'Nenhuma base enviada ainda.';
     });
@@ -310,6 +316,21 @@ function uploadBase(tipo){
         if(s3<=0)continue;
         if(vistos[cod3]!==undefined){if(s3>pecas[vistos[cod3]].saldo)pecas[vistos[cod3]].saldo=s3}
         else{vistos[cod3]=pecas.length;pecas.push({codigo:cod3,desc:desc3,tipo:tp,loc:loc3,saldo:s3})}
+      }else if(tipo==='capacetes'){
+        // capacetes: tipos CAPACETES+BOUTIQUE, só descrição CAPACETE (sem chuva/viseira/pala/kit), INCLUI saldo 0
+        var cod4=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
+        if(!cod4||cod4.length<3)continue;
+        var tp4=String(r['Tipo Mercadoria']||r['Tipo de Mercadoria']||r['Tipo']||'').trim().toUpperCase();
+        if(tp4!=='CAPACETES'&&tp4!=='BOUTIQUE')continue;
+        var desc4=String(r['Descrição Mercadoria']||r['Descricao Mercadoria']||r['Descrição']||r['Mercadoria']||'').trim();
+        var du4=desc4.toUpperCase();
+        if(du4.indexOf('CAPACETE')===-1&&du4.indexOf('CAP ')!==0)continue;
+        if(/CHUVA|VISEIRA|VIS\.|PALA|KIT|REPARO|MECANISMO|ORELHA|BOTAO|BOTÃO|BAIONETA|FIXA|TRAVA|NYLON/.test(du4))continue;
+        var loc4=String(r['Localizações']||r['Localizacoes']||r['Localização']||r['Localizacao']||r['Local']||'').replace(/[\[\]]/g,'').replace(/SEM LOCAL/g,'').trim();
+        var sRaw4=r['Saldo Disponível']||r['Saldo Disponivel']||r['Saldo Contábil']||r['Saldo Contabil']||r['Saldo']||0;
+        var s4=typeof sRaw4==='number'?Math.round(sRaw4):Math.round(parseFloat(String(sRaw4).replace(/\./g,'').replace(',','.'))||0);
+        if(vistos[cod4]!==undefined){if(s4>pecas[vistos[cod4]].saldo)pecas[vistos[cod4]].saldo=s4}
+        else{vistos[cod4]=pecas.length;pecas.push({codigo:cod4,desc:desc4,tipo:tp4,loc:loc4,saldo:s4})}
       }else{
         var cod2=String(r['Código Mercadoria']||r['Codigo Mercadoria']||r['Código']||'').trim();
         var loc2=normalizarLoc(String(r['Localização']||r['Localizacao']||r['Local']||r['localização']||''));
