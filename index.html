@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v19</b> (01/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v20</b> (01/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -734,7 +734,7 @@ function renderHome(){
   var h='';
   for(var i=n-1;i>=0;i--){
     var c=db.c[i],ic=Object.keys(c.itens).length,sc=c.status==='ok'?'sts-ok':'sts-and',st=c.status==='ok'?(c.enviadaEm?'☁️ Enviado':'Concluída'):'Em andamento';
-    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porCapacete?'🪖 ':c.porTipo?'🏷️ ':'📍 ')+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
+    var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porCapacete?'🪖 ':c.porTipo?'🏷️ ':'📍 ')+c.numContagem+'ª CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
     var conf=(c.conferente?' • '+c.conferente:'')+(c.enviadaEm?' • ☁️ enviado '+c.enviadaEm:c.exportadaEm?' • 📄 exportado '+c.exportadaEm:'');
     h+='<div class="c-item"><div class="c-info" onclick="abrirC('+i+')"><h4>'+c.nome+'</h4><p>'+tipo+conf+' • '+c.data+' • '+c.totalBipes+' bipes</p></div><div class="c-meta"><div class="cnt" onclick="abrirC('+i+')">'+ic+'</div><div class="sts '+sc+'" onclick="abrirC('+i+')">'+st+'</div><button class="del-btn" onclick="event.stopPropagation();delContagem('+i+')">🗑</button></div></div>';
   }
@@ -1333,6 +1333,13 @@ function renderLocGroups(filtro){
       else if(prog.c1&&prog.c1.status==='ok'&&!prog.c2){statusTxt='1ª ✅ | 2ª pendente';borderLeft='border-left:3px solid var(--yl)';progColor='var(--yl)';pct=50}
       else if(prog.c1&&prog.c1.status==='and'){var p1=prog.c1.total>0?Math.round(prog.c1.done/prog.c1.total*100):0;statusTxt='1ª 🔄 '+p1+'%';borderLeft='border-left:3px solid var(--or)';progColor='var(--or)';pct=p1/2}
       else if(prog.c1&&prog.c1.status==='ok'&&prog.c2&&prog.c2.status==='and'){statusTxt='1ª ✅ | 2ª 🔄';borderLeft='border-left:3px solid var(--bl)';progColor='var(--bl)';pct=75}
+      if(locModoAtual==='capacetes'){
+        var nOk=0,emAnd=false;
+        for(var q=0;q<db.c.length;q++){var cq=db.c[q];if(cq.modo==='locacao'&&cq.porCapacete&&cq.locacao===loc2){if(cq.status==='ok')nOk++;else emAnd=true}}
+        statusTxt=(nOk?nOk+' contagem'+(nOk>1?'ns':'')+' concluída'+(nOk>1?'s':''):'')+(emAnd?(nOk?' • ':'')+'🔄 em andamento':'');
+        progColor=nOk?'var(--gn)':emAnd?'var(--or)':'var(--bd2)';pct=nOk?100:(emAnd?50:0);
+        borderLeft=(nOk||emAnd)?'border-left:3px solid '+(nOk?'var(--gn)':'var(--or)'):'';
+      }
       h+='<div class="loc-sub-item" onclick="pedirConferente(\''+loc2.replace(/'/g,"\\'")+'\')" style="'+borderLeft+'"><div style="flex:1"><div class="loc-name">'+loc2+'</div><div class="loc-info">'+cnt+' peças'+(statusTxt?' • '+statusTxt:'')+'</div></div><div class="loc-prog"><div style="font-size:11px;color:'+progColor+'">'+Math.round(pct)+'%</div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+progColor+'"></div></div></div></div>';
     }
     h+='</div></div>';
@@ -1346,6 +1353,22 @@ function filtrarLocacoes(){renderLocGroups(document.getElementById('locSearchInp
 // ===== LOCAÇÃO: CONFERENTE + INICIAR =====
 function pedirConferente(loc){
   pendingLoc=loc;
+  if(locModoAtual==='capacetes'){
+    var maxN=0;
+    for(var i2=0;i2<db.c.length;i2++){
+      var c2=db.c[i2];
+      if(c2.modo==='locacao'&&c2.porCapacete&&c2.locacao===loc){
+        if(c2.status==='and'){cur=i2;abrirContLocTela();return}
+        if(c2.numContagem>maxN)maxN=c2.numContagem;
+      }
+    }
+    pendingNum=maxN+1;
+    document.getElementById('modConfTit').textContent=pendingNum+'ª Contagem — Capacetes';
+    document.getElementById('modConfSub').textContent='Selecione o conferente para a '+pendingNum+'ª contagem';
+    document.getElementById('selConferente').value='';
+    openM('modConferente');
+    return;
+  }
   // Determinar qual contagem (1ª ou 2ª)
   var tem1=false,tem2=false;
   for(var i=0;i<db.c.length;i++){
@@ -1380,14 +1403,14 @@ function abrirContLoc(loc,numCont,conferente){
     itens[cod]={qtd:null,desc:(base[cod]&&base[cod].desc)||'',saldo:p.saldo,loc:loc,extra:false,curva:p.curva||'',marca:p.marca||'',ultEntrada:p.ultEntrada||'',ultSaida:p.ultSaida||''};
     ordem.push(cod);
   }
-  db.c.push({nome:(numCont===2?'2ª':'1ª')+' Cont. '+loc,modo:'locacao',porTipo:locModoAtual==='tipo',porCapacete:locModoAtual==='capacetes',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
+  db.c.push({nome:numCont+'ª Cont. '+loc,modo:'locacao',porTipo:locModoAtual==='tipo',porCapacete:locModoAtual==='capacetes',locacao:loc,numContagem:numCont,conferente:conferente,data:now(),status:'and',itens:itens,ordem:ordem,totalBipes:0,extras:[]});
   saveDB();cur=db.c.length-1;abrirContLocTela();
 }
 
 function abrirContLocTela(){
   var c=db.c[cur];show('scrLocCont');
   document.getElementById('locContTit').textContent=(c.porCapacete?'🪖 ':'📍 ')+c.locacao;
-  document.getElementById('locContSub').textContent=(c.numContagem===2?'2ª':'1ª')+' contagem • '+c.conferente;
+  document.getElementById('locContSub').textContent=c.numContagem+'ª contagem • '+c.conferente;
   hideLocAlerts();renderLocCont();
   var inp=document.getElementById('scanLoc');inp.value='';setTimeout(function(){safeFocus(inp)},200);
 }
