@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v18</b> (01/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v19</b> (01/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -733,9 +733,9 @@ function renderHome(){
   if(!n){el.innerHTML='<div class="empty-msg">Nenhuma contagem ainda.</div>';renderResumo();return}
   var h='';
   for(var i=n-1;i>=0;i--){
-    var c=db.c[i],ic=Object.keys(c.itens).length,sc=c.status==='ok'?'sts-ok':'sts-and',st=c.status==='ok'?'Concluída':'Em andamento';
+    var c=db.c[i],ic=Object.keys(c.itens).length,sc=c.status==='ok'?'sts-ok':'sts-and',st=c.status==='ok'?(c.enviadaEm?'☁️ Enviado':'Concluída'):'Em andamento';
     var tipo=c.modo==='diaria'?(c.numContagem===2?'2ª':'1ª')+' DIÁRIA':c.modo==='locacao'?(c.porCapacete?'🪖 ':c.porTipo?'🏷️ ':'📍 ')+(c.numContagem===2?'2ª':'1ª')+' CONT.':c.modo==='roupa'?'👕 '+(c.numContagem===2?'2ª':'1ª')+' ROUPA':'LIVRE';
-    var conf=c.conferente?' • '+c.conferente:'';
+    var conf=(c.conferente?' • '+c.conferente:'')+(c.enviadaEm?' • ☁️ enviado '+c.enviadaEm:c.exportadaEm?' • 📄 exportado '+c.exportadaEm:'');
     h+='<div class="c-item"><div class="c-info" onclick="abrirC('+i+')"><h4>'+c.nome+'</h4><p>'+tipo+conf+' • '+c.data+' • '+c.totalBipes+' bipes</p></div><div class="c-meta"><div class="cnt" onclick="abrirC('+i+')">'+ic+'</div><div class="sts '+sc+'" onclick="abrirC('+i+')">'+st+'</div><button class="del-btn" onclick="event.stopPropagation();delContagem('+i+')">🗑</button></div></div>';
   }
   el.innerHTML=h;
@@ -1669,10 +1669,11 @@ function renderResumo(){
 }
 
 // ===== UTIL =====
-function download(conteudo,nome){var blob=new Blob([conteudo],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Exportado: '+nome)}
+function download(conteudo,nome){if(cur!==null&&db.c[cur]){db.c[cur].exportadaEm=now();saveDB()}var blob=new Blob([conteudo],{type:'text/plain;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('Exportado: '+nome)}
 
 // Exportar XLSX com opção de compartilhar (Google Drive)
 function exportarXLSX(wb,nome){
+  if(cur!==null&&db.c[cur]){db.c[cur].exportadaEm=now();saveDB()}
   var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
   var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   var file=new File([blob],nome,{type:blob.type});
