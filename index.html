@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v20</b> (01/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v21</b> (04/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -713,6 +713,40 @@ function verificarCatalogo(cod){
   });
 }
 
+// ===== CÓDIGO DO FABRICANTE (fora do catálogo carregado) =====
+// Regra: se o código bipado NÃO está no catálogo carregado (134k), é o código de
+// ORIGEM DO FABRICANTE (peça que recodificamos). NÃO conta no inventário — fica
+// guardado só para auditoria, com aviso de que não está na base carregada.
+function registrarFab(cod,fb,scanEl){
+  if(cur===null)return;var c=db.c[cur];
+  if(!c.fab)c.fab={};
+  var agora=now();
+  if(c.fab[cod]){c.fab[cod].qtd++;c.fab[cod].ultimo=agora}
+  else{c.fab[cod]={qtd:1,primeiro:agora,ultimo:agora,modo:c.modo}}
+  c.totalFab=(c.totalFab||0)+1;
+  saveDB();
+  if(fb){fb.textContent='⚠ FABRICANTE: '+cod+' fora da base — NÃO contado, guardado p/ auditoria ('+c.fab[cod].qtd+'x)';fb.className='scan-fb';fb.style.color='var(--or)';setTimeout(function(){fb.style.color=''},4000)}
+  somAlerta();
+  toast('⚠ '+cod+' não está na base carregada — código do fabricante (só auditoria)');
+  if(scanEl){scanEl.value='';safeFocus(scanEl)}
+}
+// Gate: consulta o catálogo carregado; ok(res) roda se a peça existe; senão,
+// registra o código como do fabricante (auditoria) e NÃO conta.
+function checarCat(cod,fb,scanEl,ok){
+  buscarCatalogo(cod,function(res){
+    if(res)ok(typeof res==='string'?{desc:res,loc:''}:res);
+    else registrarFab(cod,fb,scanEl);
+  });
+}
+// Anexa a aba "Fabricante" (auditoria) ao workbook, se houver códigos do fabricante.
+function anexarAbaFab(wb,c){
+  if(!c||!c.fab)return;
+  var dados=[];for(var fc in c.fab){var f=c.fab[fc];dados.push({'Código (fabricante)':fc,'Bipes':f.qtd,'1º bipe':f.primeiro||'','Último bipe':f.ultimo||'','Modo':f.modo||c.modo})}
+  if(!dados.length)return;
+  var ws=XLSX.utils.json_to_sheet(dados);ws['!cols']=[{wch:20},{wch:8},{wch:18},{wch:18},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fabricante');
+}
+
 // Mostrar descrição ao clicar
 function verDescPeca(cod){
   var desc=base[cod]?base[cod].desc:'';
@@ -813,23 +847,25 @@ function bipeLivre(){
   if(cur===null)return;var c=db.c[cur];
   if(c.status==='ok'){toast('Contagem concluída');scanL.value='';return}
   var cod=scanL.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
-  var fb=document.getElementById('fbLivre');
-  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();scanL.value='';safeFocus(scanL);setTimeout(function(){fb.style.color=''},3000);return}
-  c.totalBipes++;
-  if(c.itens[cod]){
-    ultimoBipe={modo:'livre',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};
-    c.itens[cod].qtd++;
-    fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();
-  }else{
-    var loc=base[cod]?base[cod].loc||'':'';
-    var desc0=base[cod]?base[cod].desc||'':'';
-    c.itens[cod]={qtd:1,desc:desc0,loc:loc};
-    if(c.ordem.indexOf(cod)===-1)c.ordem.push(cod);
-    ultimoBipe={modo:'livre',cod:cod,qtdAntes:0,era_novo:true};
-    fb.textContent='★ Novo → '+cod+(desc0?' — '+desc0:'')+(loc?' ('+loc+')':'');fb.className='scan-fb fb-new';somConfirmacao();
-  }
-  saveDB();renderLivre(cod);scanL.value='';safeFocus(scanL);
-  verificarCatalogo(cod);
+  var fb=document.getElementById('fbLivre');scanL.value='';
+  if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanL);setTimeout(function(){fb.style.color=''},3000);return}
+  checarCat(cod,fb,scanL,function(r){
+    c.totalBipes++;
+    if(c.itens[cod]){
+      ultimoBipe={modo:'livre',cod:cod,qtdAntes:c.itens[cod].qtd,era_novo:false};
+      c.itens[cod].qtd++;
+      fb.textContent='✓ +1 → '+cod+' = '+c.itens[cod].qtd;fb.className='scan-fb fb-add';somConfirmacao();
+    }else{
+      var loc=(base[cod]&&base[cod].loc)||r.loc||'';
+      var desc0=(base[cod]&&base[cod].desc)||r.desc||'';
+      c.itens[cod]={qtd:1,desc:desc0,loc:loc};
+      if(c.ordem.indexOf(cod)===-1)c.ordem.push(cod);
+      ultimoBipe={modo:'livre',cod:cod,qtdAntes:0,era_novo:true};
+      fb.textContent='★ Novo → '+cod+(desc0?' — '+desc0:'')+(loc?' ('+loc+')':'');fb.className='scan-fb fb-new';somConfirmacao();
+    }
+    saveDB();renderLivre(cod);safeFocus(scanL);
+    if(semLocal(c.itens[cod].loc)){somAlertaDuplo();toast('⚠ '+cod+' sem localização no catálogo')}
+  });
 }
 
 // ===== CONTAGEM DIÁRIA =====
@@ -841,6 +877,7 @@ function abrirDiaria(){
   show('scrDiariaImp');
   _setBaseMetaUI('diaria');
   if((!diariaBase||!diariaBase.length)&&navigator.onLine)buscarBaseRemota('diaria');
+  else if(navigator.onLine)autoSyncBaseSeNova('diaria',DKM);
   // Mostrar base já carregada
   var el=document.getElementById('diariaBaseAtual');
   if(diariaBase&&diariaBase.length>0){
@@ -973,9 +1010,13 @@ function bipeDiaria(){
     fb.textContent='✓ '+cod+' = 1';fb.className='scan-fb fb-new';somConfirmacao();
     saveDB();renderDiaria(cod);safeFocus(scanD);verificarCatalogo(cod);return;
   }else{
-    // ITEM 1: Recusar código fora da lista
-    fb.textContent='✗ Código não está na lista de conferência';fb.className='scan-fb';fb.style.color='var(--dg)';
-    somErro();safeFocus(scanD);setTimeout(function(){fb.style.color=''},3000);
+    // Fora da lista do dia → no catálogo = peça de outra lista; fora dele = código do fabricante (auditoria)
+    buscarCatalogo(cod,function(res){
+      if(res){
+        fb.textContent='✗ Código não está na lista de conferência';fb.className='scan-fb';fb.style.color='var(--dg)';
+        somErro();safeFocus(scanD);setTimeout(function(){fb.style.color=''},3000);
+      }else{registrarFab(cod,fb,scanD)}
+    });
   }
 }
 
@@ -1194,6 +1235,7 @@ function abrirLocacao(){
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('locacao');
   if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('locacao');
+  else if(navigator.onLine)autoSyncBaseSeNova('locacao',LKM);
   _renderLocBaseCard();
 }
 function abrirTipo(){
@@ -1203,6 +1245,7 @@ function abrirTipo(){
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('tipo');
   if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('tipo');
+  else if(navigator.onLine)autoSyncBaseSeNova('tipo',TKM);
   _renderLocBaseCard();
 }
 function buscarBaseLocOuTipo(){buscarBaseRemota(locModoAtual==='tipo'?'tipo':locModoAtual==='capacetes'?'capacetes':'locacao')}
@@ -1213,6 +1256,7 @@ function abrirCapacetes(){
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('capacetes');
   if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('capacetes');
+  else if(navigator.onLine)autoSyncBaseSeNova('capacetes',CKM);
   _renderLocBaseCard();
 }
 
@@ -1483,8 +1527,12 @@ function bipeLoc(){
     somAlerta();showLocAlert('warn','Peça '+cod+' pertence à locação '+locCorreta+' — registrada como extra');
     saveDB();renderLocCont(cod);safeFocus(scanLC);verificarCatalogo(cod);return;
   }
-  // 4. Não cadastrada
-  fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);
+  // 4. Não cadastrada em nenhuma base → no catálogo = peça de outra base; fora dele = código do fabricante (auditoria)
+  buscarCatalogo(cod,function(res){
+    if(res){
+      fb.textContent='✗ '+cod+' não cadastrada';fb.className='scan-fb';fb.style.color='var(--dg)';somErro();showLocAlert('err','Código '+cod+' não encontrado na base');setTimeout(function(){fb.style.color=''},3000);safeFocus(scanLC);
+    }else{registrarFab(cod,fb,scanLC)}
+  });
 }
 
 function confirmarCapOrg(){
@@ -1696,7 +1744,7 @@ function download(conteudo,nome){if(cur!==null&&db.c[cur]){db.c[cur].exportadaEm
 
 // Exportar XLSX com opção de compartilhar (Google Drive)
 function exportarXLSX(wb,nome){
-  if(cur!==null&&db.c[cur]){db.c[cur].exportadaEm=now();saveDB()}
+  if(cur!==null&&db.c[cur]){anexarAbaFab(wb,db.c[cur]);db.c[cur].exportadaEm=now();saveDB()}
   var wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
   var blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   var file=new File([blob],nome,{type:blob.type});
@@ -1910,9 +1958,10 @@ function enviarContagem(){
   }
   if(!itens.length){toast('Contagem vazia');return}
   if(!c.envioId){c.envioId=c.modo+'-'+Date.now()+'-'+Math.floor(Math.random()*1e6);saveDB()}
-  toast('☁️ Enviando '+itens.length+' itens...');
+  var fab=[];for(var fc in (c.fab||{})){var f=c.fab[fc];fab.push({codigo:fc,qtd:f.qtd,primeiro:f.primeiro||'',ultimo:f.ultimo||'',modo:f.modo||c.modo})}
+  toast('☁️ Enviando '+itens.length+' itens'+(fab.length?' + '+fab.length+' fabricante':'')+'...');
   fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:INV_TOKEN,contagem:{
-    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens}})})
+    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens,fab:fab}})})
   .then(function(r){return r.json()}).then(function(j){
     if(j&&j.ok){c.enviadaEm=now();saveDB();toast('☁️ Enviada! '+j.itens+' itens'+(j.divergencias?' · '+j.divergencias+' divergências':''))}
     else{toast('Falha no envio: '+((j&&j.erro)||'?'))}
@@ -1930,6 +1979,19 @@ function _setBaseMetaUI(tipo){
   var meta=null;try{meta=JSON.parse(localStorage.getItem(tipo==='diaria'?DKM:tipo==='tipo'?TKM:tipo==='capacetes'?CKM:LKM))}catch(e){}
   var el=document.getElementById(tipo==='diaria'?'diariaBaseMeta':'locBaseMeta');
   el&&(el.textContent=meta?_metaBaseTxt(meta):'A planilha é enviada pelo computador — aqui só bipa');
+}
+// Se o dashboard tem uma base MAIS NOVA que a salva no aparelho, rebaixa sozinho.
+// (Antes só baixava quando não havia base nenhuma — base velha ficava presa.)
+function autoSyncBaseSeNova(tipo,metaKey){
+  if(!INV_API_URL||!navigator.onLine)return;
+  var localMeta=null;try{localMeta=JSON.parse(localStorage.getItem(metaKey))}catch(e){}
+  fetch(INV_API_URL+'?action=getBases&token='+encodeURIComponent(INV_TOKEN))
+  .then(function(r){return r.json()}).then(function(j){
+    if(!j.ok||!j.bases||!j.bases[tipo]||!j.bases[tipo].enviado_em)return;
+    var localTs=localMeta&&localMeta.enviado_em?new Date(localMeta.enviado_em).getTime():0;
+    var remotoTs=new Date(j.bases[tipo].enviado_em).getTime();
+    if(remotoTs>localTs){toast('☁️ Base nova no dashboard — atualizando...');buscarBaseRemota(tipo)}
+  }).catch(function(){});
 }
 function buscarBaseRemota(tipo){
   if(!INV_API_URL){toast('Backend não configurado');return}
@@ -2146,21 +2208,18 @@ function bipeRoupa(){
   var cod=scanR.value.replace(/[\t\n\r]/g,'').trim();if(!cod)return;
   scanR.value='';var fb=document.getElementById('fbRoupa');
   if(codInvalido(cod)){fb.textContent='✗ Etiqueta fora do padrão: '+cod;fb.className='scan-fb';fb.style.color='var(--dg)';somErro();safeFocus(scanR);setTimeout(function(){fb.style.color=''},3000);return}
-  // Abrir modal para cor e tamanho
-  roupaCodPendente=cod;
-  document.getElementById('modCorTamTit').textContent=cod;
-  // Buscar descrição
-  var desc=base[cod]?base[cod].desc:'';
-  function abrirCorTam(descFinal){
-    document.getElementById('modCorTamDesc').textContent=descFinal||'';
+  checarCat(cod,fb,scanR,function(r){
+    // Abrir modal para cor e tamanho
+    roupaCodPendente=cod;
+    document.getElementById('modCorTamTit').textContent=cod;
+    var desc=(base[cod]&&base[cod].desc)||r.desc||'';
+    document.getElementById('modCorTamDesc').textContent=desc||'';
     document.getElementById('inpTamanho').value='';
     document.getElementById('inpCor').value='';
     renderHistBtns();
     openM('modCorTam');
     setTimeout(function(){document.getElementById('inpTamanho').focus()},200);
-  }
-  if(desc){abrirCorTam(desc)}
-  else{buscarCatalogo(cod,function(catDesc){abrirCorTam(catDesc||'')})}
+  });
 }
 
 function renderHistBtns(){

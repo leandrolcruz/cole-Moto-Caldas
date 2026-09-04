@@ -110,7 +110,7 @@
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
 var SK='inv_dash_senha';
-var contagens=[],itensAtual=[],contAtual=null;
+var contagens=[],itensAtual=[],fabAtual=[],contAtual=null;
 
 function senha(){return localStorage.getItem(SK)||''}
 function entrar(){
@@ -158,13 +158,14 @@ function renderLista(){
   if(!tot){el.className='vazio';el.textContent='Nenhuma contagem recebida ainda. Manda uma pelo app (☁️ Enviar).';return}
   el.className='';
   var ordenado=contagens.slice().sort(function(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)});
-  var h='<table><tr><th>Recebida</th><th>Modo</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Itens</th><th>Diverg.</th></tr>';
+  var h='<table><tr><th>Recebida</th><th>Modo</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Itens</th><th>Diverg.</th><th>Fab</th></tr>';
   ordenado.forEach(function(c){
-    var d=Number(c.divergencias)||0;
+    var d=Number(c.divergencias)||0,nf=Number(c.total_fab)||0;
     h+='<tr class="clicavel" onclick="abrirDetalhe(\''+String(c.id).replace(/'/g,'')+'\')"><td>'+fmtData(c.recebido_em)+'</td>'+
        '<td><span class="badge b-bl">'+(c.modo||'')+'</span></td><td>'+(c.nome||'')+'</td><td>'+(c.num_contagem||'')+'</td>'+
        '<td>'+(c.conferente||'')+'</td><td>'+(c.locacao||'')+'</td><td>'+(c.total_itens||'')+'</td>'+
-       '<td><span class="badge '+(d?'b-dg':'b-gn')+'">'+d+'</span></td></tr>';
+       '<td><span class="badge '+(d?'b-dg':'b-gn')+'">'+d+'</span></td>'+
+       '<td>'+(nf?'<span class="badge b-or">⚠ '+nf+'</span>':'')+'</td></tr>';
   });
   el.innerHTML=h+'</table>';
 }
@@ -174,7 +175,7 @@ function abrirDetalhe(id){
   document.getElementById('detTitulo').textContent=(contAtual.nome||contAtual.modo)+' — '+(contAtual.conferente||'')+' — '+fmtData(contAtual.recebido_em);
   document.getElementById('detItens').innerHTML='<div class="vazio">Carregando itens…</div>';
   api('action=getItens&id='+encodeURIComponent(id)).then(function(j){
-    itensAtual=j.ok?(j.itens||[]):[];renderItens();
+    itensAtual=j.ok?(j.itens||[]):[];fabAtual=j.ok?(j.fab||[]):[];renderItens();
     document.getElementById('cardDetalhe').scrollIntoView({behavior:'smooth'});
   });
 }
@@ -194,7 +195,15 @@ function renderItens(){
        (roupa?'<td>'+(i.tamanho||'')+'</td><td>'+(i.cor||'')+'</td>':'')+
        '<td>'+(i.saldo===''?'—':i.saldo)+'</td><td><b>'+(i.contado===''?'—':i.contado)+'</b></td><td class="'+cls+'">'+difTxt+'</td></tr>';
   });
-  document.getElementById('detItens').innerHTML=n?h+'</table>':'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';
+  var hf='';
+  if(fabAtual&&fabAtual.length){
+    hf='<div style="margin-top:16px"><b style="color:var(--or)">⚠ Códigos do fabricante</b>'+
+       '<p class="sub" style="margin:4px 0 6px">Bipados fora da base carregada — NÃO contados, só auditoria (peças que trocaram de código).</p>'+
+       '<table><tr><th>Código</th><th>Bipes</th><th>1º bipe</th><th>Último</th><th>Modo</th></tr>';
+    fabAtual.forEach(function(f){hf+='<tr><td style="font-family:monospace">'+(f.codigo||'')+'</td><td>'+(f.bipes||'')+'</td><td>'+(f.primeiro||'')+'</td><td>'+(f.ultimo||'')+'</td><td>'+(f.modo||'')+'</td></tr>'});
+    hf+='</table></div>';
+  }
+  document.getElementById('detItens').innerHTML=(n?h+'</table>':'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>')+hf;
 }
 function exportarXlsx(){
   if(!itensAtual.length)return;
@@ -208,6 +217,11 @@ function exportarXlsx(){
   var ws=XLSX.utils.json_to_sheet(dados);
   ws['!cols']=[{wch:16},{wch:34},{wch:12},{wch:8},{wch:10},{wch:11},{wch:9},{wch:9},{wch:6}];
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contagem');
+  if(fabAtual&&fabAtual.length){
+    var wf=XLSX.utils.json_to_sheet(fabAtual.map(function(f){return {'Código (fabricante)':f.codigo,'Bipes':f.bipes,'1º bipe':f.primeiro,'Último bipe':f.ultimo,'Modo':f.modo}}));
+    wf['!cols']=[{wch:20},{wch:8},{wch:18},{wch:18},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,wf,'Fabricante');
+  }
   XLSX.writeFile(wb,('Contagem-'+(contAtual.nome||contAtual.modo)+'-'+(contAtual.num_contagem||'')+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
 }
 // ===== 1ª × 2ª =====

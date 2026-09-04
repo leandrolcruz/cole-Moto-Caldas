@@ -32,9 +32,13 @@ var ABA_BASES_META = 'bases_meta';
 var CAB_BASES_META = ['tipo', 'enviado_em', 'por', 'n_pecas'];
 var CAB_CONTAGENS = ['id', 'recebido_em', 'origem', 'modo', 'nome',
                      'num_contagem', 'conferente', 'data_app', 'status',
-                     'locacao', 'total_itens', 'total_bipes', 'divergencias'];
+                     'locacao', 'total_itens', 'total_bipes', 'divergencias',
+                     'total_fab'];
 var CAB_ITENS = ['contagem_id', 'codigo', 'descricao', 'local', 'saldo',
                  'contado', 'extra', 'tamanho', 'cor'];
+// Códigos do fabricante (fora do catálogo carregado) — só auditoria, não contam
+var ABA_FAB = 'fabricante';
+var CAB_FAB = ['contagem_id', 'codigo', 'bipes', 'primeiro', 'ultimo', 'modo'];
 
 function _props() { return PropertiesService.getScriptProperties(); }
 
@@ -94,11 +98,23 @@ function doPost(e) {
       shI.getRange(shI.getLastRow() + 1, 1, linhas.length, CAB_ITENS.length)
          .setValues(linhas);
     }
+    // Códigos do fabricante (auditoria) — fora do catálogo, não contam no inventário
+    var fab = c.fab || [];
+    if (fab.length) {
+      var shF = _aba(ABA_FAB, CAB_FAB);
+      var linhasFab = fab.map(function (f) {
+        return [c.id, f.codigo || '', f.qtd || '', f.primeiro || '',
+                f.ultimo || '', f.modo || c.modo];
+      });
+      shF.getRange(shF.getLastRow() + 1, 1, linhasFab.length, CAB_FAB.length)
+         .setValues(linhasFab);
+    }
     shC.appendRow([c.id, new Date(), c.origem || '', c.modo, c.nome || '',
                    c.numContagem || '', c.conferente || '', c.data || '',
                    c.status || '', c.locacao || '', c.itens.length,
-                   c.totalBipes || '', divergencias]);
-    return _json({ok: true, itens: linhas.length, divergencias: divergencias});
+                   c.totalBipes || '', divergencias, fab.length]);
+    return _json({ok: true, itens: linhas.length, divergencias: divergencias,
+                  fab: fab.length});
   } catch (err) {
     return _json({ok: false, erro: String(err)});
   } finally {
@@ -115,6 +131,12 @@ function _apagarContagem(shC, shI, id) {
   // apaga de baixo pra cima, em blocos contíguos quando possível
   for (var j = itens.length - 1; j >= 1; j--) {
     if (String(itens[j][0]) === String(id)) shI.deleteRow(j + 1);
+  }
+  // fabricante (auditoria) da mesma contagem
+  var shF = _aba(ABA_FAB, CAB_FAB);
+  var fabs = shF.getDataRange().getValues();
+  for (var k = fabs.length - 1; k >= 1; k--) {
+    if (String(fabs[k][0]) === String(id)) shF.deleteRow(k + 1);
   }
 }
 
@@ -196,7 +218,16 @@ function doGet(e) {
       CAB_ITENS.forEach(function (col, k) { it[col] = tudo[j][k]; });
       itens.push(it);
     }
-    return _json({ok: true, itens: itens});
+    var shF = _aba(ABA_FAB, CAB_FAB);
+    var tudoF = shF.getDataRange().getValues();
+    var fab = [];
+    for (var f = 1; f < tudoF.length; f++) {
+      if (String(tudoF[f][0]) !== String(p.id)) continue;
+      var ff = {};
+      CAB_FAB.forEach(function (col, k) { ff[col] = tudoF[f][k]; });
+      fab.push(ff);
+    }
+    return _json({ok: true, itens: itens, fab: fab});
   }
   return _json({ok: false, erro: 'ação desconhecida'});
 }
