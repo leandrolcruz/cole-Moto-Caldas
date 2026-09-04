@@ -40,6 +40,54 @@ var CAB_ITENS = ['contagem_id', 'codigo', 'descricao', 'local', 'saldo',
 var ABA_FAB = 'fabricante';
 var CAB_FAB = ['contagem_id', 'codigo', 'bipes', 'primeiro', 'ultimo', 'modo'];
 
+// Histórico de bases (guarda TODAS as versões; apaga manual no dashboard).
+// A base MAIS RECENTE segue também na aba per-tipo + bases_meta (compat).
+var ABA_HIST = 'bases_hist';
+var CAB_HIST = ['versao_id', 'tipo', 'enviado_em', 'por', 'n_pecas'];
+var ABA_BLOBS = 'base_blobs';          // peças da versão em JSON, fatiado em chunks
+var CAB_BLOBS = ['versao_id', 'chunk_idx', 'chunk'];
+var BLOB_CHUNK = 45000;                // limite ~50k chars por célula
+
+function _escreverBlob(versaoId, pecas) {
+  var sh = _aba(ABA_BLOBS, CAB_BLOBS);
+  var json = JSON.stringify(pecas), linhas = [];
+  for (var i = 0, idx = 0; i < json.length; i += BLOB_CHUNK, idx++) {
+    linhas.push([versaoId, idx, json.substring(i, i + BLOB_CHUNK)]);
+  }
+  if (linhas.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, linhas.length, CAB_BLOBS.length).setValues(linhas);
+  }
+}
+function _lerBlob(versaoId) {
+  var sh = _aba(ABA_BLOBS, CAB_BLOBS), vals = sh.getDataRange().getValues(), chunks = [];
+  for (var i = 1; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(versaoId)) chunks.push([Number(vals[i][1]), vals[i][2]]);
+  }
+  if (!chunks.length) return null;
+  chunks.sort(function (a, b) { return a[0] - b[0]; });
+  try { return JSON.parse(chunks.map(function (c) { return c[1]; }).join('')); }
+  catch (e) { return null; }
+}
+function _apagarBlob(versaoId) {
+  var sh = _aba(ABA_BLOBS, CAB_BLOBS), vals = sh.getDataRange().getValues();
+  for (var i = vals.length - 1; i >= 1; i--) {
+    if (String(vals[i][0]) === String(versaoId)) sh.deleteRow(i + 1);
+  }
+}
+// Versões de um tipo (do histórico), mais recente primeiro.
+function _versoesDe(tipo) {
+  var sh = _aba(ABA_HIST, CAB_HIST), vals = sh.getDataRange().getValues(), out = [];
+  for (var i = 1; i < vals.length; i++) {
+    if (!tipo || String(vals[i][1]) === String(tipo)) {
+      var o = {};
+      CAB_HIST.forEach(function (c, k) { o[c] = vals[i][k]; });
+      out.push(o);
+    }
+  }
+  out.sort(function (a, b) { return new Date(b.enviado_em) - new Date(a.enviado_em); });
+  return out;
+}
+
 function _props() { return PropertiesService.getScriptProperties(); }
 
 // Segredo: Script Property vence; senão cai no secrets.gs (fora do git)
@@ -71,6 +119,7 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     if (body.action === 'upload_base') return _uploadBase(body);
+    if (body.action === 'deleteBase') return _deleteBase(body);
     if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
@@ -166,8 +215,91 @@ function _uploadBase(body) {
   for (var i = vals.length - 1; i >= 1; i--) {
     if (String(vals[i][0]) === body.tipo) shM.deleteRow(i + 1);
   }
-  shM.appendRow([body.tipo, new Date(), body.por || '', body.pecas.length]);
-  return _json({ok: true, n: body.pecas.length});
+  var agora = new Date();
+  shM.appendRow([body.tipo, agora, body.por || '', body.pecas.length]);
+  // guarda a versão no histórico (mantém TODAS)
+  var versaoId = body.tipo + '-' + agora.getTime();
+  _aba(ABA_HIST, CAB_HIST).appendRow([versaoId, body.tipo, agora,
+                                      body.por || '', body.pecas.length]);
+  _escreverBlob(versaoId, body.pecas);
+  return _json({ok: true, n: body.pecas.length, versao_id: versaoId});
+}
+
+// grava um conjunto de peças na aba per-tipo + bases_meta (o "mais recente")
+function _gravarPerTipo(tipo, pecas, ver) {
+  var cfg = BASES[tipo];
+  if (!cfg) return;
+  var sh = _aba(cfg.aba, cfg.cab);
+  sh.clearContents();
+  sh.appendRow(cfg.cab);
+  if (pecas.length) {
+    var linhas = pecas.map(function (pc) {
+      return cfg.cab.map(function (c) {
+        var v = pc[c]; return (v === undefined || v === null) ? '' : v; });
+    });
+    sh.getRange(2, 1, linhas.length, cfg.cab.length).setValues(linhas);
+  }
+  var shM = _aba(ABA_BASES_META, CAB_BASES_META), mv = shM.getDataRange().getValues();
+  for (var i = mv.length - 1; i >= 1; i--) {
+    if (String(mv[i][0]) === tipo) shM.deleteRow(i + 1);
+  }
+  shM.appendRow([tipo, (ver && ver.enviado_em) || new Date(),
+                 (ver && ver.por) || '', pecas.length]);
+}
+function _limparPerTipo(tipo) {
+  var cfg = BASES[tipo];
+  if (cfg) { var sh = _aba(cfg.aba, cfg.cab); sh.clearContents(); sh.appendRow(cfg.cab); }
+  var shM = _aba(ABA_BASES_META, CAB_BASES_META), mv = shM.getDataRange().getValues();
+  for (var i = mv.length - 1; i >= 1; i--) {
+    if (String(mv[i][0]) === tipo) shM.deleteRow(i + 1);
+  }
+}
+// Migra as bases atuais (só na aba per-tipo) para o histórico (hist + blob),
+// preservando o timestamp original. Idempotente — pula tipo que já tem versão.
+function _migrarHist() {
+  var tipos = ['diaria', 'locacao', 'tipo', 'capacetes'], feitos = [];
+  tipos.forEach(function (t) {
+    if (_versoesDe(t).length) return;
+    var m = _metaBase(t);
+    if (!m) return;
+    var cfg = BASES[t], sh = _aba(cfg.aba, cfg.cab), vals = sh.getDataRange().getValues(), pecas = [];
+    for (var b = 1; b < vals.length; b++) {
+      var pb = {}; cfg.cab.forEach(function (c, k) { pb[c] = vals[b][k]; }); pecas.push(pb);
+    }
+    if (!pecas.length) return;
+    var ts = m.enviado_em ? new Date(m.enviado_em) : new Date();
+    var vid = t + '-' + ts.getTime();
+    _aba(ABA_HIST, CAB_HIST).appendRow([vid, t, ts, m.por || '', pecas.length]);
+    _escreverBlob(vid, pecas);
+    feitos.push({tipo: t, versao_id: vid, n: pecas.length});
+  });
+  return feitos;
+}
+function _deleteBase(body) {
+  if (!_autorizado(body)) return _json({ok: false, erro: 'não autorizado'});
+  var vid = body.versao_id;
+  if (!vid) return _json({ok: false, erro: 'versao_id ausente'});
+  // base legado (pré-histórico): limpa a aba per-tipo + meta
+  if (String(vid).indexOf('legado-') === 0) {
+    _limparPerTipo(String(vid).substring(7));
+    return _json({ok: true, legado: true});
+  }
+  var shH = _aba(ABA_HIST, CAB_HIST), vals = shH.getDataRange().getValues(), tipo = null;
+  for (var i = vals.length - 1; i >= 1; i--) {
+    if (String(vals[i][0]) === String(vid)) { tipo = vals[i][1]; shH.deleteRow(i + 1); }
+  }
+  _apagarBlob(vid);
+  if (tipo) {
+    // reflete o novo "mais recente" na aba per-tipo (usada pelo getBase sem versão)
+    var rest = _versoesDe(tipo);
+    if (rest.length) {
+      var pc = _lerBlob(rest[0].versao_id);
+      if (pc) _gravarPerTipo(tipo, pc, rest[0]);
+    } else {
+      _limparPerTipo(tipo);
+    }
+  }
+  return _json({ok: true});
 }
 
 function doGet(e) {
@@ -177,6 +309,17 @@ function doGet(e) {
     if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
     var cfgB = BASES[p.tipo];
     if (!cfgB) return _json({ok: false, erro: 'tipo inválido'});
+    // versão específica escolhida pelo contador → lê do blob
+    // ('legado-*' = base pré-histórico, cai no read da aba per-tipo abaixo)
+    if (p.versao && p.versao.indexOf('legado-') !== 0) {
+      var pecasV = _lerBlob(p.versao);
+      if (!pecasV) return _json({ok: false, erro: 'versão não encontrada'});
+      var mv = _versoesDe(p.tipo).filter(function (v) {
+        return String(v.versao_id) === String(p.versao); })[0] || null;
+      return _json({ok: true, meta: mv ? {enviado_em: mv.enviado_em, por: mv.por,
+                    n: mv.n_pecas, versao_id: mv.versao_id} : _metaBase(p.tipo),
+                    pecas: pecasV});
+    }
     var shB = _aba(cfgB.aba, cfgB.cab);
     var valsB = shB.getDataRange().getValues();
     var pecas = [];
@@ -193,6 +336,28 @@ function doGet(e) {
                                     locacao: _metaBase('locacao'),
                                     tipo: _metaBase('tipo'),
                                     capacetes: _metaBase('capacetes')}});
+  }
+  if (p.action === 'migrarHist') {
+    if (!p.senha || p.senha !== _segredo('SENHA')) {
+      return _json({ok: false, erro: 'senha inválida'});
+    }
+    return _json({ok: true, migrados: _migrarHist()});
+  }
+  if (p.action === 'getBasesHist') {
+    if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
+    var versoes = _versoesDe(p.tipo || null);
+    // compat: bases pré-histórico (só na aba per-tipo) aparecem como 'legado'
+    var tiposComHist = {};
+    versoes.forEach(function (v) { tiposComHist[v.tipo] = true; });
+    var tiposAlvo = p.tipo ? [p.tipo] : ['diaria', 'locacao', 'tipo', 'capacetes'];
+    tiposAlvo.forEach(function (t) {
+      if (tiposComHist[t]) return;
+      var m = _metaBase(t);
+      if (m) versoes.push({versao_id: 'legado-' + t, tipo: t,
+                           enviado_em: m.enviado_em, por: m.por, n_pecas: m.n});
+    });
+    versoes.sort(function (a, b) { return new Date(b.enviado_em) - new Date(a.enviado_em); });
+    return _json({ok: true, versoes: versoes});
   }
   if (!p.senha || p.senha !== _segredo('SENHA')) {
     return _json({ok: false, erro: 'senha inválida'});

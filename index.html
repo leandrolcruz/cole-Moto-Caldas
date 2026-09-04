@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v21</b> (04/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v22</b> (04/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -239,9 +239,9 @@
     <div class="inv-title"><h2>Contagem Diária</h2><p>Base vem do dashboard — aqui só bipa</p></div>
   </div>
   <div class="imp-area">
-    <div class="file-drop" onclick="buscarBaseRemota('diaria')">
-      <div class="icon">☁️</div>
-      <p>Buscar base do dashboard</p>
+    <div class="file-drop" onclick="escolherBase('diaria')">
+      <div class="icon">📚</div>
+      <p>Escolher base do dashboard</p>
       <small id="diariaBaseMeta">A planilha é enviada pelo computador — aqui só bipa</small>
     </div>
     <div id="diariaBaseAtual" style="margin-top:14px"></div>
@@ -342,9 +342,9 @@
     <div class="inv-title"><h2 id="locImpTit">Contagem por Locação</h2><p>Base vem do dashboard — aqui só bipa</p></div>
   </div>
   <div class="imp-area">
-    <div class="file-drop" onclick="buscarBaseLocOuTipo()">
-      <div class="icon">☁️</div>
-      <p>Buscar base do dashboard</p>
+    <div class="file-drop" onclick="escolherBaseLocOuTipo()">
+      <div class="icon">📚</div>
+      <p>Escolher base do dashboard</p>
       <small id="locBaseMeta">A planilha é enviada pelo computador — aqui só bipa</small>
     </div>
     <div id="locBaseAtual" style="margin-top:14px"></div>
@@ -592,6 +592,14 @@
     <option value="Victor">Victor</option>
   </select>
   <div class="ma"><button class="btn btn-sf" onclick="closeM('modConfRoupa')">Cancelar</button><button class="btn btn-or" onclick="criarRoupa()">Criar</button></div>
+</div></div>
+
+<!-- Modal: escolher base (histórico de versões) -->
+<div class="modal-ov" id="modEscolherBase"><div class="modal">
+  <h3>📚 Escolher base</h3>
+  <p style="font-size:12px;color:var(--tx2);margin-bottom:10px" id="modEscolherSub">Qual base contar?</p>
+  <div id="modEscolherLista" style="max-height:52vh;overflow:auto"></div>
+  <div class="ma"><button class="btn btn-sf" onclick="closeM('modEscolherBase')">Fechar</button></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -876,8 +884,7 @@ try{var dbStr=localStorage.getItem(DK);if(dbStr)diariaBase=JSON.parse(dbStr)}cat
 function abrirDiaria(){
   show('scrDiariaImp');
   _setBaseMetaUI('diaria');
-  if((!diariaBase||!diariaBase.length)&&navigator.onLine)buscarBaseRemota('diaria');
-  else if(navigator.onLine)autoSyncBaseSeNova('diaria',DKM);
+  aoAbrirModo('diaria', !!(diariaBase&&diariaBase.length));
   // Mostrar base já carregada
   var el=document.getElementById('diariaBaseAtual');
   if(diariaBase&&diariaBase.length>0){
@@ -1234,8 +1241,7 @@ function abrirLocacao(){
   document.getElementById('locImpTit').textContent='Contagem por Locação';
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('locacao');
-  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('locacao');
-  else if(navigator.onLine)autoSyncBaseSeNova('locacao',LKM);
+  aoAbrirModo('locacao', !!(locBase&&locBase.pecas));
   _renderLocBaseCard();
 }
 function abrirTipo(){
@@ -1244,19 +1250,17 @@ function abrirTipo(){
   document.getElementById('locImpTit').textContent='Contagem por Tipo';
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('tipo');
-  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('tipo');
-  else if(navigator.onLine)autoSyncBaseSeNova('tipo',TKM);
+  aoAbrirModo('tipo', !!(locBase&&locBase.pecas));
   _renderLocBaseCard();
 }
-function buscarBaseLocOuTipo(){buscarBaseRemota(locModoAtual==='tipo'?'tipo':locModoAtual==='capacetes'?'capacetes':'locacao')}
+function escolherBaseLocOuTipo(){escolherBase(locModoAtual==='tipo'?'tipo':locModoAtual==='capacetes'?'capacetes':'locacao')}
 function abrirCapacetes(){
   locModoAtual='capacetes';
   try{locBase=JSON.parse(localStorage.getItem(CK))||null}catch(e){locBase=null}
   document.getElementById('locImpTit').textContent='Contagem de Capacetes';
   tmpLoc=[];show('scrLocImp');
   _setBaseMetaUI('capacetes');
-  if((!locBase||!locBase.pecas)&&navigator.onLine)buscarBaseRemota('capacetes');
-  else if(navigator.onLine)autoSyncBaseSeNova('capacetes',CKM);
+  aoAbrirModo('capacetes', !!(locBase&&locBase.pecas));
   _renderLocBaseCard();
 }
 
@@ -1980,24 +1984,52 @@ function _setBaseMetaUI(tipo){
   var el=document.getElementById(tipo==='diaria'?'diariaBaseMeta':'locBaseMeta');
   el&&(el.textContent=meta?_metaBaseTxt(meta):'A planilha é enviada pelo computador — aqui só bipa');
 }
-// Se o dashboard tem uma base MAIS NOVA que a salva no aparelho, rebaixa sozinho.
-// (Antes só baixava quando não havia base nenhuma — base velha ficava presa.)
-function autoSyncBaseSeNova(tipo,metaKey){
+// ===== ESCOLHA DE BASE (o contador escolhe qual versão contar) =====
+var _escolherTipo='';
+// Ao abrir o modo: sem base local → busca/escolhe; com base → não força nada
+// (o contador troca pelo botão "Escolher base"). Newest NÃO é mais forçado.
+function aoAbrirModo(tipo,jaTemBase){
   if(!INV_API_URL||!navigator.onLine)return;
-  var localMeta=null;try{localMeta=JSON.parse(localStorage.getItem(metaKey))}catch(e){}
-  fetch(INV_API_URL+'?action=getBases&token='+encodeURIComponent(INV_TOKEN))
+  fetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
   .then(function(r){return r.json()}).then(function(j){
-    if(!j.ok||!j.bases||!j.bases[tipo]||!j.bases[tipo].enviado_em)return;
-    var localTs=localMeta&&localMeta.enviado_em?new Date(localMeta.enviado_em).getTime():0;
-    var remotoTs=new Date(j.bases[tipo].enviado_em).getTime();
-    if(remotoTs>localTs){toast('☁️ Base nova no dashboard — atualizando...');buscarBaseRemota(tipo)}
-  }).catch(function(){});
+    var vs=(j.ok&&j.versoes)||[];
+    if(!vs.length){if(!jaTemBase)buscarBaseRemota(tipo);return}
+    if(!jaTemBase){
+      if(vs.length===1)buscarBaseRemota(tipo,vs[0].versao_id);
+      else abrirEscolhaBase(tipo,vs);
+    }
+  }).catch(function(){if(!jaTemBase)buscarBaseRemota(tipo)});
 }
-function buscarBaseRemota(tipo){
+function escolherBase(tipo){
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  toast('☁️ Buscando histórico...');
+  fetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
+  .then(function(r){return r.json()}).then(function(j){abrirEscolhaBase(tipo,(j.ok&&j.versoes)||[])})
+  .catch(function(){toast('Falha ao buscar histórico')});
+}
+function abrirEscolhaBase(tipo,vs){
+  _escolherTipo=tipo;
+  var nome={diaria:'Diária',locacao:'Locação',tipo:'Tipo',capacetes:'Capacetes'}[tipo]||tipo;
+  document.getElementById('modEscolherSub').textContent=nome+' — '+vs.length+' base(s) no dashboard. Toque na que vai contar:';
+  var el=document.getElementById('modEscolherLista');
+  if(!vs.length){el.innerHTML='<p style="color:var(--or);font-size:13px">Nenhuma base no dashboard ainda — suba a planilha lá primeiro.</p>'}
+  else{
+    var h='';
+    vs.forEach(function(v,i){
+      var d=v.enviado_em?new Date(v.enviado_em):null;
+      var q=d&&!isNaN(d)?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'?';
+      h+='<div class="c-item" style="cursor:pointer" onclick="usarBase(\''+v.versao_id+'\')"><div class="c-info"><h4>'+(i===0?'🟢 ':'')+v.n_pecas+' peças</h4><p>'+q+(v.por?' · '+v.por:'')+'</p></div><div class="c-meta">▶</div></div>';
+    });
+    el.innerHTML=h;
+  }
+  openM('modEscolherBase');
+}
+function usarBase(versaoId){closeM('modEscolherBase');buscarBaseRemota(_escolherTipo,versaoId)}
+function buscarBaseRemota(tipo,versao){
   if(!INV_API_URL){toast('Backend não configurado');return}
   if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
   toast('☁️ Buscando base...');
-  fetch(INV_API_URL+'?action=getBase&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
+  fetch(INV_API_URL+'?action=getBase&tipo='+tipo+(versao?'&versao='+encodeURIComponent(versao):'')+'&token='+encodeURIComponent(INV_TOKEN))
   .then(function(r){return r.json()}).then(function(j){
     if(!j.ok){toast('Falha: '+(j.erro||'?'));return}
     if(!j.pecas||!j.pecas.length){toast('Nenhuma base de '+(tipo==='diaria'?'contagem diária':'locação')+' no dashboard ainda — suba a planilha lá primeiro');return}

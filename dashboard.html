@@ -85,24 +85,28 @@
       <p class="sub" id="meta-diaria" style="margin:6px 0">…</p>
       <div class="linha"><input type="file" id="file-diaria" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('diaria')">Enviar base</button></div>
       <p class="sub" id="st-diaria"></p>
+      <div id="hist-diaria"></div>
     </div>
     <div class="card">
       <b>📍 Base da Contagem por Locação</b> <span class="sub" style="display:inline">(Planilha de Localização)</span>
       <p class="sub" id="meta-locacao" style="margin:6px 0">…</p>
       <div class="linha"><input type="file" id="file-locacao" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('locacao')">Enviar base</button></div>
       <p class="sub" id="st-locacao"></p>
+      <div id="hist-locacao"></div>
     </div>
     <div class="card">
       <b>🏷️ Base da Contagem por Tipo</b> <span class="sub" style="display:inline">(Listagem de Mercadoria com a coluna Tipo Mercadoria)</span>
       <p class="sub" id="meta-tipo" style="margin:6px 0">…</p>
       <div class="linha"><input type="file" id="file-tipo" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('tipo')">Enviar base</button></div>
       <p class="sub" id="st-tipo"></p>
+      <div id="hist-tipo"></div>
     </div>
     <div class="card">
       <b>🪖 Base da Contagem de Capacetes</b> <span class="sub" style="display:inline">(Listagem de Mercadoria — filtra capacetes dos tipos CAPACETES+BOUTIQUE, inclui saldo zero)</span>
       <p class="sub" id="meta-capacetes" style="margin:6px 0">…</p>
       <div class="linha"><input type="file" id="file-capacetes" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('capacetes')">Enviar base</button></div>
       <p class="sub" id="st-capacetes"></p>
+      <div id="hist-capacetes"></div>
     </div>
   </div>
 </div>
@@ -289,6 +293,34 @@ function renderBases(){
       document.getElementById('meta-'+t).textContent=m?('Base atual: '+fmtData(m.enviado_em)+' · '+m.n+' peças'+(m.por?' · enviada por '+m.por:'')):'Nenhuma base enviada ainda.';
     });
   });
+  renderHistBases();
+}
+function renderHistBases(){
+  api('action=getBasesHist').then(function(j){
+    if(!j.ok)return;
+    var porTipo={};
+    (j.versoes||[]).forEach(function(v){(porTipo[v.tipo]=porTipo[v.tipo]||[]).push(v)});
+    ['diaria','locacao','tipo','capacetes'].forEach(function(t){
+      var el=document.getElementById('hist-'+t);if(!el)return;
+      var vs=porTipo[t]||[];
+      if(!vs.length){el.innerHTML='';return}
+      var h='<div class="sub" style="margin:8px 0 4px">📚 Histórico de bases ('+vs.length+') — o contador escolhe qual contar na coletora:</div>';
+      vs.forEach(function(v,i){
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(42,46,66,.4)">'+
+           '<span style="font-size:12px">'+(i===0?'<span class="badge b-gn">mais nova</span> ':'')+fmtData(v.enviado_em)+' · <b>'+v.n_pecas+'</b> peças'+(v.por?' · '+v.por:'')+'</span>'+
+           '<button class="btn sec" style="padding:3px 9px;font-size:12px" onclick="deleteBaseVersao(\''+v.versao_id+'\',\''+t+'\')">🗑 apagar</button></div>';
+      });
+      el.innerHTML=h;
+    });
+  });
+}
+function deleteBaseVersao(vid,tipo){
+  if(!confirm('Apagar esta versão da base de '+tipo+'?\nNão dá pra desfazer.'))return;
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action:'deleteBase',senha:senha(),versao_id:vid})})
+  .then(function(r){return r.json()}).then(function(j){
+    if(j.ok)renderBases();else alert('Falha: '+(j.erro||'?'));
+  }).catch(function(){alert('Falha ao apagar — tente de novo')});
 }
 function lerPlanilha(file,cb){
   var reader=new FileReader();
