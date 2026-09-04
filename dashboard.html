@@ -59,8 +59,9 @@
   <div class="kpis" id="kpis"></div>
   <div class="tabs">
     <div class="tab ativa" id="tabL" onclick="mudarTab('L')">Contagens</div>
-    <div class="tab" id="tabC" onclick="mudarTab('C')">1ª × 2ª contagem</div>
+    <div class="tab" id="tabC" onclick="mudarTab('C')">🔎 Análises</div>
     <div class="tab" id="tabB" onclick="mudarTab('B')">📥 Bases</div>
+    <div class="tab" id="tabV" onclick="mudarTab('V')">🆕 Versões</div>
   </div>
   <div id="paneL"><div class="card"><div id="listaContagens" class="vazio">Carregando…</div></div>
     <div class="card" id="cardDetalhe" style="display:none">
@@ -71,10 +72,32 @@
       </div>
       <div style="overflow-x:auto"><div id="detItens"></div></div>
     </div></div>
-  <div id="paneC" style="display:none"><div class="card">
-    <div class="linha"><select id="selPar" onchange="renderComparacao()"></select></div>
-    <div style="overflow-x:auto"><div id="compArea" class="vazio">Escolha um par acima.</div></div>
-  </div></div>
+  <div id="paneC" style="display:none">
+    <div class="card">
+      <div class="linha" style="justify-content:space-between">
+        <div class="linha" style="margin:0">
+          <label style="font-size:13px;color:var(--tx2)">Contagem:</label>
+          <select id="anaContagem" style="min-width:240px"></select>
+          <button class="btn" onclick="rodarAnalise()">Analisar</button>
+          <label style="font-size:12px;color:var(--tx2)"><input type="checkbox" id="anaSoDiv" checked onchange="renderAnalise()"> só divergentes</label>
+        </div>
+        <button class="btn gn" onclick="exportarAnalise()">⬇ Excel</button>
+      </div>
+      <p class="sub" id="anaInfo" style="margin-top:8px"></p>
+      <div class="kpis" id="anaKpis"></div>
+      <div style="overflow-x:auto"><div id="anaArea" class="vazio">Escolha uma contagem e clique em Analisar. A análise cruza o contado com o estoque (contábil, reserva, O.S.) — faça antes de qualquer ajuste.</div></div>
+    </div>
+    <div class="card">
+      <div class="linha" style="justify-content:space-between">
+        <b>💰 Garimpo — peças paradas (capital travado)</b>
+        <div class="linha" style="margin:0"><label style="font-size:12px;color:var(--tx2)">sem venda há</label>
+          <select id="anaMeses" onchange="renderGarimpo()"><option value="6">6 meses</option><option value="12" selected>12 meses</option><option value="24">24 meses</option></select>
+          <button class="btn gn" onclick="exportarGarimpo()">⬇ Excel</button></div>
+      </div>
+      <p class="sub" id="garimpoInfo"></p>
+      <div style="overflow-x:auto"><div id="garimpoArea" class="vazio">Abra a aba para carregar o estoque…</div></div>
+    </div>
+  </div>
   <div id="paneB" style="display:none">
     <div class="card">
       <p class="sub" style="margin-bottom:8px">Suba aqui a planilha do Microwork — as coletoras baixam a base sozinhas (não se importa mais planilha no aparelho).</p>
@@ -109,6 +132,10 @@
       <div id="hist-capacetes"></div>
     </div>
   </div>
+  <div id="paneV" style="display:none"><div class="card">
+    <p class="sub">O que mudou em cada atualização — dashboard e coletoras (apps das leitoras). A versão do app aparece na tela inicial da coletora.</p>
+    <div id="versoesArea"></div>
+  </div></div>
 </div>
 
 <script>
@@ -139,12 +166,44 @@ function testar(){
 }
 function carregar(){api('action=getData').then(function(j){if(j.ok){contagens=j.contagens||[];renderLista()}})}
 function mudarTab(t){
-  ['L','C','B'].forEach(function(x){
+  ['L','C','B','V'].forEach(function(x){
     document.getElementById('tab'+x).classList.toggle('ativa',x===t);
     document.getElementById('pane'+x).style.display=x===t?'block':'none';
   });
-  if(t==='C')montarPares();
+  if(t==='C')initAnalise();
   if(t==='B'){document.getElementById('inpPor').value=localStorage.getItem('inv_dash_por')||'';renderBases()}
+  if(t==='V')renderVersoes();
+}
+// Changelog curado (dashboard + coletoras). Mais novo primeiro.
+var CHANGELOG=[
+  {data:'04/09/26',area:'Dashboard',ver:'Análises',itens:[
+    'Nova aba "Análises": cruza o contado com o estoque real (contábil, disponível, reserva, O.S., requisição) — faça antes de qualquer ajuste.',
+    'Mostra divergentes com obsoleto, última venda, custo, preço de venda e alerta de "comprometido" (reserva/O.S.) pra não ajustar errado.',
+    'Garimpo de peças paradas: capital travado por tempo sem venda (6/12/24 meses), pra priorizar o que vender. Export em Excel.',
+    'Base do dia enriquecida (rotina 3112 + Listagem) atualizada automaticamente.']},
+  {data:'04/09/26',area:'Coletoras',ver:'Netum v22 / Eyoyo v31',itens:[
+    'Histórico de bases: o contador ESCOLHE qual base contar ao abrir o modo (📚 Escolher base) — não força mais a mais nova.']},
+  {data:'04/09/26',area:'Dashboard',ver:'Bases',itens:[
+    'Histórico de versões de cada base (data, quem subiu, nº de peças) com botão de apagar.']},
+  {data:'04/09/26',area:'Coletoras',ver:'Netum v21 / Eyoyo v30',itens:[
+    'Código do fabricante: bipe fora da base carregada NÃO conta — fica guardado só pra auditoria, com aviso na hora.',
+    'Correção: a base nova do dashboard chega sozinha na coletora (antes a base velha ficava presa).']},
+  {data:'04/09/26',area:'Dashboard',ver:'Fabricante',itens:[
+    'Coluna "Fab" na lista de contagens + bloco de códigos do fabricante no detalhe + aba no Excel.']},
+  {data:'04/09/26',area:'Base',ver:'Capacetes',itens:[
+    'Base de capacetes refeita com TODOS os capacetes (com e sem estoque), descrições completas — 1.115 itens.']},
+];
+function renderVersoes(){
+  var h='';
+  CHANGELOG.forEach(function(v){
+    var cor=v.area==='Coletoras'?'b-or':v.area==='Base'?'b-gn':'b-bl';
+    h+='<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+       '<div class="linha" style="margin-bottom:4px"><span class="badge '+cor+'">'+v.area+'</span>'+
+       '<b>'+v.ver+'</b><span class="sub" style="margin-left:auto">'+v.data+'</span></div>'+
+       '<ul style="margin:0 0 0 18px;font-size:13px;color:var(--tx2)">'+
+       v.itens.map(function(i){return '<li style="margin:2px 0">'+i+'</li>'}).join('')+'</ul></div>';
+  });
+  document.getElementById('versoesArea').innerHTML=h;
 }
 function fmtData(v){
   if(!v)return'';var d=new Date(v);
@@ -228,48 +287,122 @@ function exportarXlsx(){
   }
   XLSX.writeFile(wb,('Contagem-'+(contAtual.nome||contAtual.modo)+'-'+(contAtual.num_contagem||'')+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
 }
-// ===== 1ª × 2ª =====
-function chavePar(c){return [c.modo,c.locacao||'',c.nome?String(c.nome).replace(/^[12]ª\s*/,''):''].join('|')}
-function montarPares(){
-  var grupos={};
-  contagens.forEach(function(c){
-    var n=Number(c.num_contagem);if(n!==1&&n!==2)return;
-    var k=c.modo+'|'+(c.locacao||'');
-    (grupos[k]=grupos[k]||{})[n]=c; // fica a mais recente de cada nº
-  });
-  var sel=document.getElementById('selPar');sel.innerHTML='<option value="">— escolha —</option>';
-  Object.keys(grupos).forEach(function(k){
-    var g=grupos[k];if(!g[1]||!g[2])return;
-    var o=document.createElement('option');o.value=g[1].id+'||'+g[2].id;
-    o.textContent=g[1].modo+(g[1].locacao?' · '+g[1].locacao:'')+' — '+g[1].conferente+' × '+g[2].conferente;
+// ===== ANÁLISES (contado × estoque real + garimpo de capital parado) =====
+var estoqueDB=null,estoqueMap={},estoqueMeta=null,anaResult=[],anaContNome='',garimpoResult=[];
+function fmtRS(n){return 'R$ '+(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function mesesDesde(dstr){
+  if(!dstr)return Infinity; // nunca vendeu
+  var p=String(dstr).substring(0,10).split('/');if(p.length!==3)return Infinity;
+  var d=new Date(+p[2],+p[1]-1,+p[0]);if(isNaN(d))return Infinity;
+  return (Date.now()-d.getTime())/(1000*60*60*24*30.44);
+}
+function initAnalise(){
+  var sel=document.getElementById('anaContagem');
+  var ord=contagens.slice().sort(function(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)});
+  sel.innerHTML=ord.length?'':'<option value="">— nenhuma contagem —</option>';
+  ord.forEach(function(c){
+    var o=document.createElement('option');o.value=String(c.id);
+    o.textContent=(c.modo||'')+(c.locacao?' · '+c.locacao:'')+' — '+(c.nome||'')+' ('+fmtData(c.recebido_em)+')';
     sel.appendChild(o);
   });
-  if(sel.options.length===1)document.getElementById('compArea').innerHTML='<div class="vazio">Ainda não há um par 1ª+2ª do mesmo lugar pra comparar.</div>';
+  carregarEstoque(function(){renderGarimpo()});
 }
-function renderComparacao(){
-  var v=document.getElementById('selPar').value;if(!v)return;
-  var ids=v.split('||');
-  document.getElementById('compArea').innerHTML='<div class="vazio">Cruzando…</div>';
-  Promise.all([api('action=getItens&id='+encodeURIComponent(ids[0])),
-               api('action=getItens&id='+encodeURIComponent(ids[1]))]).then(function(rs){
-    var m1={},m2={};
-    (rs[0].itens||[]).forEach(function(i){m1[i.codigo]=i});
-    (rs[1].itens||[]).forEach(function(i){m2[i.codigo]=i});
-    var cods=Object.keys(Object.assign({},m1,m2)).sort();
-    var h='<table><tr><th>Código</th><th>Descrição</th><th>Local</th><th>Sist.</th><th>1ª</th><th>2ª</th><th>1ª×2ª</th></tr>';
-    var diverg=0;
-    cods.forEach(function(cod){
-      var a=m1[cod]||{},b=m2[cod]||{};
-      var q1=a.contado===''||a.contado===undefined?null:Number(a.contado);
-      var q2=b.contado===''||b.contado===undefined?null:Number(b.contado);
-      var igual=q1!==null&&q2!==null&&q1===q2;
-      if(!igual)diverg++;
-      h+='<tr'+(igual?'':' style="background:rgba(230,57,70,.06)"')+'><td style="font-family:monospace">'+cod+'</td><td>'+(a.descricao||b.descricao||'')+'</td><td>'+(a.local||b.local||'')+'</td>'+
-         '<td>'+(a.saldo!==''&&a.saldo!==undefined?a.saldo:(b.saldo||'—'))+'</td><td>'+(q1===null?'—':q1)+'</td><td>'+(q2===null?'—':q2)+'</td>'+
-         '<td>'+(igual?'<span class="dif-ok">OK</span>':'<span class="dif-menos">✗</span>')+'</td></tr>';
+function carregarEstoque(cb){
+  if(estoqueDB){cb&&cb();return}
+  document.getElementById('garimpoArea').innerHTML='<div class="vazio">Carregando base do dia…</div>';
+  api('action=getEstoque').then(function(j){
+    estoqueDB=(j.ok&&j.pecas)||[];estoqueMeta=j.meta||null;estoqueMap={};
+    estoqueDB.forEach(function(p){estoqueMap[String(p.codigo).toUpperCase()]=p});
+    var info='Base do dia: '+(estoqueMeta?fmtData(estoqueMeta.gerado_em)+' · '+estoqueMeta.n+' peças':'não gerada ainda — rode o estoque_diario');
+    document.getElementById('anaInfo').textContent=info;
+    document.getElementById('garimpoInfo').textContent=info;
+    cb&&cb();
+  }).catch(function(){document.getElementById('garimpoArea').innerHTML='<div class="vazio">Falha ao carregar a base do dia.</div>'});
+}
+function rodarAnalise(){
+  var id=document.getElementById('anaContagem').value;if(!id){alert('Escolha uma contagem');return}
+  var c=contagens.filter(function(x){return String(x.id)===String(id)})[0];
+  anaContNome=c?((c.nome||c.modo)+' '+(c.locacao||'')):id;
+  document.getElementById('anaArea').innerHTML='<div class="vazio">Cruzando com o estoque…</div>';
+  carregarEstoque(function(){
+    api('action=getItens&id='+encodeURIComponent(id)).then(function(j){
+      var itens=(j.ok&&j.itens)||[];
+      anaResult=[];
+      itens.forEach(function(i){
+        if(i.contado===''||i.contado===null||i.contado===undefined)return; // só o que foi contado
+        var contado=Number(i.contado)||0;
+        var e=estoqueMap[String(i.codigo).toUpperCase()]||{};
+        var contabil=(e.contabil===undefined?null:Number(e.contabil));
+        var dif=contabil===null?null:contado-contabil;
+        var compr=(Number(e.reserva)||0)+(Number(e.os)||0)+(Number(e.requisicao)||0)+(Number(e.transito)||0);
+        var obs='';
+        if(dif!==null&&dif<0&&compr>0)obs='⚠ comprometido (res '+(Number(e.reserva)||0)+'/OS '+(Number(e.os)||0)+') — confira antes de ajustar';
+        else if(dif!==null&&dif!==0)obs='ajustar '+(dif>0?'+':'')+dif;
+        anaResult.push({codigo:i.codigo,desc:e.desc||i.descricao||'',contado:contado,
+          contabil:contabil,disponivel:e.disponivel,reserva:e.reserva,os:e.os,dif:dif,
+          obsoleto:e.obsoleto||'',ult_venda:e.ult_venda||'',custo:Number(e.custo)||0,
+          venda:Number(e.venda)||0,capital:Number(e.capital_parado)||0,obs:obs});
+      });
+      renderAnalise();
     });
-    document.getElementById('compArea').innerHTML='<p class="sub">'+cods.length+' códigos · <b style="color:'+(diverg?'var(--dg)':'var(--gn)')+'">'+diverg+' em desacordo</b></p>'+h+'</table>';
   });
+}
+function renderAnalise(){
+  var so=document.getElementById('anaSoDiv').checked;
+  var rows=anaResult.filter(function(r){return so?(r.dif!==null&&r.dif!==0):true});
+  var nDiv=anaResult.filter(function(r){return r.dif!==null&&r.dif!==0}).length;
+  var capDiv=anaResult.reduce(function(a,r){return a+(r.dif&&r.dif<0?Math.abs(r.dif)*r.custo:0)},0);
+  document.getElementById('anaKpis').innerHTML=
+    '<div class="kpi"><b>'+anaResult.length+'</b><span>itens contados</span></div>'+
+    '<div class="kpi"><b style="color:'+(nDiv?'var(--dg)':'var(--gn)')+'">'+nDiv+'</b><span>divergentes</span></div>'+
+    '<div class="kpi"><b style="color:var(--or)">'+fmtRS(capDiv)+'</b><span>capital em falta</span></div>';
+  if(!rows.length){document.getElementById('anaArea').innerHTML='<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';return}
+  var h='<table><tr><th>Código</th><th>Descrição</th><th>Cont.</th><th>Contábil</th><th>Dif.</th><th>Disp.</th><th>Res/OS</th><th>Últ. venda</th><th>Custo</th><th>Venda</th><th>Obs.</th></tr>';
+  rows.forEach(function(r){
+    var dcls=r.dif===null?'':r.dif===0?'dif-ok':r.dif>0?'dif-mais':'dif-menos';
+    var dtxt=r.dif===null?'?':r.dif===0?'OK':(r.dif>0?'+':'')+r.dif;
+    var obso=r.obsoleto?' <span class="badge b-dg">OBS</span>':'';
+    h+='<tr><td style="font-family:monospace">'+r.codigo+obso+'</td><td>'+r.desc+'</td>'+
+       '<td><b>'+r.contado+'</b></td><td>'+(r.contabil===null?'?':r.contabil)+'</td>'+
+       '<td class="'+dcls+'">'+dtxt+'</td><td>'+(r.disponivel===undefined?'—':r.disponivel)+'</td>'+
+       '<td>'+(Number(r.reserva)||0)+'/'+(Number(r.os)||0)+'</td><td>'+(r.ult_venda||'nunca')+'</td>'+
+       '<td>'+fmtRS(r.custo)+'</td><td>'+fmtRS(r.venda)+'</td><td style="font-size:11px">'+r.obs+'</td></tr>';
+  });
+  document.getElementById('anaArea').innerHTML=h+'</table>';
+}
+function renderGarimpo(){
+  if(!estoqueDB){carregarEstoque(renderGarimpo);return}
+  var meses=Number(document.getElementById('anaMeses').value)||12;
+  garimpoResult=estoqueDB.filter(function(p){return (Number(p.contabil)||0)>0 && mesesDesde(p.ult_venda)>=meses})
+    .sort(function(a,b){return (Number(b.capital_parado)||0)-(Number(a.capital_parado)||0)});
+  var total=garimpoResult.reduce(function(a,p){return a+(Number(p.capital_parado)||0)},0);
+  document.getElementById('garimpoInfo').textContent=garimpoResult.length+' peças sem venda há '+meses+'m+ · capital travado '+fmtRS(total)+(estoqueMeta?' · base '+fmtData(estoqueMeta.gerado_em):'');
+  var top=garimpoResult.slice(0,150);
+  if(!top.length){document.getElementById('garimpoArea').innerHTML='<div class="vazio">Nada parado nesse período 🎉</div>';return}
+  var h='<table><tr><th>Código</th><th>Descrição</th><th>Curva</th><th>Contábil</th><th>Últ. venda</th><th>Custo</th><th>Venda</th><th>Capital parado</th></tr>';
+  top.forEach(function(p){
+    var obso=p.obsoleto?' <span class="badge b-dg">OBS</span>':'';
+    h+='<tr><td style="font-family:monospace">'+p.codigo+obso+'</td><td>'+(p.desc||'')+'</td><td>'+(p.curva||'')+'</td>'+
+       '<td>'+(Number(p.contabil)||0)+'</td><td>'+(p.ult_venda||'nunca')+'</td><td>'+fmtRS(p.custo)+'</td>'+
+       '<td>'+fmtRS(p.venda)+'</td><td class="dif-menos">'+fmtRS(p.capital_parado)+'</td></tr>';
+  });
+  document.getElementById('garimpoArea').innerHTML=h+'</table>'+(garimpoResult.length>150?'<p class="sub">mostrando as 150 de maior capital — baixe o Excel pra lista completa</p>':'');
+}
+function exportarAnalise(){
+  if(!anaResult.length){alert('Rode uma análise primeiro');return}
+  var dados=anaResult.map(function(r){return {'Código':r.codigo,'Descrição':r.desc,'Contado':r.contado,
+    'Saldo Contábil':r.contabil,'Diferença':r.dif,'Disponível':r.disponivel,'Reserva':r.reserva,'O.S.':r.os,
+    'Obsoleto':r.obsoleto,'Última Venda':r.ult_venda,'Custo':r.custo,'Preço Venda':r.venda,'Observação':r.obs}});
+  var ws=XLSX.utils.json_to_sheet(dados);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Análise');
+  XLSX.writeFile(wb,('Analise-'+anaContNome+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
+}
+function exportarGarimpo(){
+  if(!garimpoResult.length){alert('Nada no garimpo');return}
+  var dados=garimpoResult.map(function(p){return {'Código':p.codigo,'Descrição':p.desc,'Curva':p.curva,
+    'Saldo Contábil':p.contabil,'Última Venda':p.ult_venda||'nunca','Última Compra':p.ult_compra,
+    'Obsoleto':p.obsoleto,'Custo':p.custo,'Preço Venda':p.venda,'Capital Parado':p.capital_parado}});
+  var ws=XLSX.utils.json_to_sheet(dados);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Garimpo');
+  XLSX.writeFile(wb,'Garimpo-pecas-paradas-'+(document.getElementById('anaMeses').value)+'m.xlsx');
 }
 // ===== BASES (upload da planilha pelo computador) =====
 function normalizarLoc(loc){if(!loc)return 'SEM LOCAL';loc=loc.trim().toUpperCase();if(loc===''||loc==='0'||loc==='00'||loc==='[SEM LOCAL]')return 'SEM LOCAL';return loc}

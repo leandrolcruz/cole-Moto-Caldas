@@ -120,6 +120,7 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     if (body.action === 'upload_base') return _uploadBase(body);
     if (body.action === 'deleteBase') return _deleteBase(body);
+    if (body.action === 'upload_estoque') return _uploadEstoque(body);
     if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
@@ -275,6 +276,24 @@ function _migrarHist() {
   });
   return feitos;
 }
+// ===== BASE DO DIA (estoque enriquecido p/ o módulo de Análises) =====
+var ABA_EST_META = 'estoque_meta';
+var CAB_EST_META = ['gerado_em', 'n_pecas', 'por'];
+function _uploadEstoque(body) {
+  if (!_autorizado(body)) return _json({ok: false, erro: 'não autorizado'});
+  if (!body.pecas || !body.pecas.length) return _json({ok: false, erro: 'sem peças'});
+  _apagarBlob('estoque-atual');
+  _escreverBlob('estoque-atual', body.pecas);
+  var shM = _aba(ABA_EST_META, CAB_EST_META);
+  shM.clearContents();
+  shM.appendRow(CAB_EST_META);
+  shM.appendRow([new Date(), body.pecas.length, body.por || '']);
+  return _json({ok: true, n: body.pecas.length});
+}
+function _metaEstoque() {
+  var shM = _aba(ABA_EST_META, CAB_EST_META), v = shM.getDataRange().getValues();
+  return v.length > 1 ? {gerado_em: v[1][0], n: v[1][1], por: v[1][2]} : null;
+}
 function _deleteBase(body) {
   if (!_autorizado(body)) return _json({ok: false, erro: 'não autorizado'});
   var vid = body.versao_id;
@@ -342,6 +361,10 @@ function doGet(e) {
       return _json({ok: false, erro: 'senha inválida'});
     }
     return _json({ok: true, migrados: _migrarHist()});
+  }
+  if (p.action === 'getEstoque') {
+    if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
+    return _json({ok: true, meta: _metaEstoque(), pecas: _lerBlob('estoque-atual') || []});
   }
   if (p.action === 'getBasesHist') {
     if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
