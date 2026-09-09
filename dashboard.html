@@ -54,8 +54,10 @@
     <div><h1>📦 Inventário <span>Moto Caldas</span></h1>
       <p class="sub">Contagens recebidas das coletoras</p></div>
     <div><button class="btn sec" onclick="carregar()">↻ Recarregar</button>
+      <button class="btn" style="background:var(--dg);border-color:var(--dg)" onclick="salvarELimpar()">💾 Salvar e limpar</button>
       <button class="btn sec" onclick="sair()">Sair</button></div>
   </div>
+  <p class="sub" id="arqSt" style="display:none;margin-bottom:10px"></p>
   <div class="kpis" id="kpis"></div>
   <div class="tabs">
     <div class="tab ativa" id="tabL" onclick="mudarTab('L')">Contagens</div>
@@ -190,6 +192,18 @@ function testar(){
   }).catch(function(){document.getElementById('senhaErro').textContent='Falha ao falar com o backend.'});
 }
 function carregar(){api('action=getData').then(function(j){if(j.ok){contagens=j.contagens||[];renderLista()}})}
+function salvarELimpar(){
+  if(!confirm('💾 SALVAR E LIMPAR\n\nIsso vai:\n1. Salvar uma cópia COMPLETA da planilha na pasta do Drive (com data e hora);\n2. Zerar TODAS as contagens recebidas (itens e auditoria juntos).\n\nAs bases (capacetes, locação...) e o estoque do dia FICAM.\n\nContinuar?'))return;
+  if(!confirm('Última confirmação: as contagens serão APAGADAS do sistema (a cópia fica no Drive).\n\nSalvar e limpar agora?'))return;
+  var st=document.getElementById('arqSt');
+  st.style.display='block';st.innerHTML='⏳ Salvando cópia no Drive e limpando…';
+  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action:'arquivar_limpar',senha:senha()})})
+  .then(function(r){return r.json()}).then(function(j){
+    if(j.ok){st.innerHTML='✅ Arquivado no Drive: <a href="'+j.url+'" target="_blank" style="color:var(--bl)">'+j.nome+'</a> — contagens zeradas.';carregar()}
+    else st.innerHTML='❌ Falha: '+(j.erro||'?')+' — nada foi apagado.';
+  }).catch(function(){st.innerHTML='❌ Falha ao falar com o backend — nada foi apagado. Tente de novo.'});
+}
 function mudarTab(t){
   ['L','C','P','B','V'].forEach(function(x){
     document.getElementById('tab'+x).classList.toggle('ativa',x===t);
@@ -256,6 +270,8 @@ function exportarPrateleiras(){
 }
 // Changelog curado (dashboard + coletoras). Mais novo primeiro.
 var CHANGELOG=[
+  {data:'09/09/26',area:'Dashboard',ver:'Salvar e limpar',itens:[
+    'Botão 💾 Salvar e limpar (no topo): salva uma cópia completa da planilha na pasta do Drive (com data/hora) e zera as contagens — bases e estoque ficam. Fecha o ciclo do inventário.']},
   {data:'09/09/26',area:'Dashboard',ver:'Análises: cruzamento de contagens',itens:[
     'Marque 2+ contagens (checkbox, com "marcar todas") e a análise CRUZA uma com a outra: valores iguais = ✓ confere (aí sim compara com o estoque); valores diferentes = ⚠ recontar.',
     'Botão "📥 Gerar base de recontagem": sobe só os códigos divergentes como nova versão de base — na coletora, 📚 Escolher base → versão "recontagem" e bipa só eles.',

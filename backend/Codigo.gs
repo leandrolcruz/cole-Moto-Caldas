@@ -39,6 +39,8 @@ var CAB_ITENS = ['contagem_id', 'codigo', 'descricao', 'local', 'saldo',
 // Códigos do fabricante (fora do catálogo carregado) — só auditoria, não contam
 var ABA_FAB = 'fabricante';
 var CAB_FAB = ['contagem_id', 'codigo', 'bipes', 'primeiro', 'ultimo', 'modo'];
+// Pasta do Drive onde o "Salvar e limpar" arquiva a cópia da planilha
+var PASTA_ARQUIVO = '1Ba5GXsPF9UgUUFZlejqpBWeGl2r_W_QZ';
 
 // Histórico de bases (guarda TODAS as versões; apaga manual no dashboard).
 // A base MAIS RECENTE segue também na aba per-tipo + bases_meta (compat).
@@ -121,6 +123,7 @@ function doPost(e) {
     if (body.action === 'upload_base') return _uploadBase(body);
     if (body.action === 'deleteBase') return _deleteBase(body);
     if (body.action === 'upload_estoque') return _uploadEstoque(body);
+    if (body.action === 'arquivar_limpar') return _arquivarLimpar(body);
     if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
@@ -294,6 +297,30 @@ function _metaEstoque() {
   var shM = _aba(ABA_EST_META, CAB_EST_META), v = shM.getDataRange().getValues();
   return v.length > 1 ? {gerado_em: v[1][0], n: v[1][1], por: v[1][2]} : null;
 }
+// "Salvar e limpar": copia a planilha INTEIRA pra PASTA_ARQUIVO (Drive) e zera
+// SÓ as contagens (contagens + itens + fabricante). Bases e estoque ficam.
+// body.teste = arquiva sem limpar (validação em produção sem destruir dados).
+function _arquivarLimpar(body) {
+  if (!body.senha || body.senha !== _segredo('SENHA')) {
+    return _json({ok: false, erro: 'senha inválida'});
+  }
+  var ss = SpreadsheetApp.getActive();
+  var nome = 'Inventário MC — arquivo ' +
+             Utilities.formatDate(new Date(), 'America/Sao_Paulo', "dd-MM-yyyy HH'h'mm");
+  var copia = ss.copy(nome);
+  DriveApp.getFileById(copia.getId()).moveTo(DriveApp.getFolderById(PASTA_ARQUIVO));
+  var url = copia.getUrl();
+  if (body.teste) return _json({ok: true, teste: true, url: url, nome: nome});
+  [[ABA_CONTAGENS, CAB_CONTAGENS], [ABA_ITENS, CAB_ITENS], [ABA_FAB, CAB_FAB]]
+    .forEach(function (par) {
+      var sh = _aba(par[0], par[1]);
+      sh.clearContents();
+      sh.appendRow(par[1]);
+    });
+  return _json({ok: true, url: url, nome: nome,
+                limpo: ['contagens', 'itens', 'fabricante']});
+}
+
 function _deleteBase(body) {
   if (!_autorizado(body)) return _json({ok: false, erro: 'não autorizado'});
   var vid = body.versao_id;
@@ -436,3 +463,10 @@ function autorizar() {
   var ss = SpreadsheetApp.getActive();
   Logger.log('OK — planilha: ' + ss.getName());
 }
+
+/** Rode UMA vez no editor pra conceder o escopo do Drive (Salvar e limpar). */
+function autorizarDrive() {
+  var pasta = DriveApp.getFolderById(PASTA_ARQUIVO);
+  Logger.log('OK — pasta de arquivo: ' + pasta.getName());
+}
+
