@@ -108,6 +108,8 @@
   .qty-bump{animation:bump .3s ease-out}
   @keyframes flashRow{0%{background:var(--ac-dim)}100%{background:transparent}}
   .item-flash{animation:flashRow .8s ease-out}
+  @keyframes pulseRow{0%,100%{background:transparent}50%{background:var(--ac-dim)}}
+  .item-last{animation:pulseRow 1.1s ease-in-out infinite;box-shadow:inset 4px 0 0 var(--ac)}
   .bbar{position:fixed;bottom:0;left:0;right:0;padding:10px 16px;background:linear-gradient(0deg,var(--bg) 70%,transparent);display:flex;gap:8px;z-index:50}
   .imp-area{padding:16px;flex:1;overflow-y:auto}
   .file-drop{border:2px dashed var(--bd2);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}
@@ -205,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v27</b> (17/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v28</b> (17/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -826,7 +828,7 @@ function renderLivre(codDestaque){
   for(var i=0;i<ord.length;i++){
     var cod=ord[i],it=c.itens[cod];
     if(filtro&&cod.toUpperCase().indexOf(filtro)===-1)continue;
-    var flash=cod===codDestaque?' item-flash':'';
+    if(codDestaque)c._ultimo=codDestaque;var flash=(cod===c._ultimo?' item-last':'')+(cod===codDestaque?' item-flash':'');
     h+='<div class="item-row'+flash+'" id="row-'+cod+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-qty">'+it.qtd+'</span></div>';
   }
   el.innerHTML=h;
@@ -988,7 +990,7 @@ function renderDiaria(codDestaque){
     var contado=it.qtd!==null;if(contado)ok++;else pend++;
     var qDisp=contado?it.qtd:'-';
     var qColor=!contado?'color:var(--tx3)':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
-    var flash=cod===codDestaque?' item-flash':'';
+    if(codDestaque)c._ultimo=codDestaque;var flash=(cod===c._ultimo?' item-last':'')+(cod===codDestaque?' item-flash':'');
     h+='<div class="item-row'+flash+'" id="rowd-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="item-code">'+cod+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
   }
   el.innerHTML=h;
@@ -1519,7 +1521,7 @@ function renderLocCont(codDestaque){
     var icon=contado?(it.qtd===it.saldo?'✅':'⚠️'):'⬜';if(isExtra)icon='📦';
     var qDisp=contado?it.qtd:'-';
     var qColor=!contado?'color:var(--tx3)':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
-    var flash=cod===codDestaque?' item-flash':'';
+    if(codDestaque)c._ultimo=codDestaque;var flash=(cod===c._ultimo?' item-last':'')+(cod===codDestaque?' item-flash':'');
     h+='<div class="item-row'+flash+'" id="rowl-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="loc-item-status">'+icon+'</span><span class="item-code">'+cod+(isExtra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
   }
   el.innerHTML=h;
