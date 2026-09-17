@@ -205,7 +205,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v26</b> (17/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v27</b> (17/09/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -1380,6 +1380,11 @@ function getLocContProgress(locs){
 function renderPrateleiras(filtro){
   filtro=(filtro||'').toUpperCase();
   var h='';
+  var _prontas=_prateleirasComContagem();
+  if(_prontas.length){
+    var _pend=0;for(var _p=0;_p<_prontas.length;_p++){if(!_prontas[_p].enviadaEm)_pend++}
+    h+='<div style="padding:4px 0 10px"><button class="btn btn-bl" style="width:100%" onclick="enviarTodasPrateleiras()">☁️ Enviar todas ('+_prontas.length+' contada'+(_prontas.length>1?'s':'')+(_pend?' · '+_pend+' sem enviar':'')+')</button></div>';
+  }
   for(var i=0;i<PRATELEIRAS.length;i++){
     var loc=PRATELEIRAS[i];
     if(filtro&&loc.toUpperCase().indexOf(filtro)===-1)continue;
@@ -2012,27 +2017,62 @@ setTimeout(autoAtualizarCatalogo,3000);
 // ===== ENVIO PRO DASHBOARD (backend Apps Script do inventário) =====
 var INV_API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
 var INV_TOKEN='mc-inv-2026';
-function enviarContagem(){
-  if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}
-  if(cur===null||!db.c[cur]){toast('Nenhuma contagem aberta');return}
-  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
-  var c=db.c[cur];
+function _payloadContagem(c){
   var itens=[];
   if(c.modo==='roupa'){
     (c.roupaItens||[]).forEach(function(it){itens.push({codigo:it.codigo,desc:it.desc||'',loc:it.loc||'',qtd:it.qtd,tamanho:it.tamanho,cor:it.cor})});
   }else{
     (c.ordem||[]).forEach(function(cod){var it=c.itens[cod]||{};itens.push({codigo:cod,desc:it.desc||'',loc:it.loc||(c.locacao||''),saldo:it.saldo,qtd:it.qtd,extra:!!it.extra})});
   }
-  if(!itens.length){toast('Contagem vazia');return}
+  if(!itens.length)return null;
   if(!c.envioId){c.envioId=c.modo+'-'+Date.now()+'-'+Math.floor(Math.random()*1e6);saveDB()}
   var fab=[];for(var fc in (c.fab||{})){var f=c.fab[fc];fab.push({codigo:fc,qtd:f.qtd,primeiro:f.primeiro||'',ultimo:f.ultimo||'',modo:f.modo||c.modo})}
-  toast('☁️ Enviando '+itens.length+' itens'+(fab.length?' + '+fab.length+' fabricante':'')+'...');
-  fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:INV_TOKEN,contagem:{
-    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens,fab:fab}})})
+  return {token:INV_TOKEN,contagem:{
+    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens,fab:fab}};
+}
+function enviarContagem(){
+  if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}
+  if(cur===null||!db.c[cur]){toast('Nenhuma contagem aberta');return}
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  var c=db.c[cur];
+  var body=_payloadContagem(c);
+  if(!body){toast('Contagem vazia');return}
+  toast('☁️ Enviando '+body.contagem.itens.length+' itens'+(body.contagem.fab.length?' + '+body.contagem.fab.length+' fabricante':'')+'...');
+  fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
   .then(function(r){return r.json()}).then(function(j){
     if(j&&j.ok){c.enviadaEm=now();saveDB();toast('☁️ Enviada! '+j.itens+' itens'+(j.divergencias?' · '+j.divergencias+' divergências':''))}
     else{toast('Falha no envio: '+((j&&j.erro)||'?'))}
   }).catch(function(){toast('Falha no envio — tente de novo')});
+}
+// Contagem mais recente (com bipes) de cada prateleira — pro envio em lote
+function _prateleirasComContagem(){
+  var map={};
+  for(var i=0;i<db.c.length;i++){var c=db.c[i];if(c.modo==='locacao'&&c.porPrateleira&&Object.keys(c.itens||{}).length)map[c.locacao]=c}
+  var out=[];for(var p=0;p<PRATELEIRAS.length;p++){if(map[PRATELEIRAS[p]])out.push(map[PRATELEIRAS[p]])}
+  return out;
+}
+function enviarTodasPrateleiras(){
+  if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}
+  if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
+  var cs=_prateleirasComContagem();
+  if(!cs.length){toast('Nenhuma prateleira contada ainda');return}
+  if(!confirm('Enviar a contagem de '+cs.length+' prateleira'+(cs.length>1?'s':'')+' pro dashboard? (a mais recente de cada uma)'))return;
+  var ok=0,falha=0,idx=0;
+  function prox(){
+    if(idx>=cs.length){
+      saveDB();renderPrateleiras(document.getElementById('locSearchInput').value.trim());
+      toast(falha?('☁️ '+ok+' enviada'+(ok!==1?'s':'')+' · '+falha+' falhou'+(falha>1?'ram':'')+' — toque de novo pra reenviar'):('☁️ '+ok+' prateleira'+(ok!==1?'s':'')+' enviada'+(ok!==1?'s':'')+'!'));
+      return;
+    }
+    var c=cs[idx++];
+    var body=_payloadContagem(c);
+    if(!body){prox();return}
+    toast('☁️ Enviando '+c.locacao+' ('+idx+'/'+cs.length+')...');
+    fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+    .then(function(r){return r.json()}).then(function(j){if(j&&j.ok){c.enviadaEm=now();ok++}else{falha++}prox()})
+    .catch(function(){falha++;prox()});
+  }
+  prox();
 }
 
 // ===== BASES REMOTAS (planilha entra pelo dashboard; coletora só baixa) =====
