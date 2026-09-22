@@ -110,6 +110,57 @@ function _aba(nome, cabecalho) {
   return sh;
 }
 
+// Datas SEMPRE como texto ISO (UTC). Gravar `new Date()` na célula passava pelo
+// fuso da planilha e voltava 7h atrasado no getValues (bug achado 22/09/26).
+function _agoraISO() { return new Date().toISOString(); }
+function _iso(v) { return (v instanceof Date) ? v.toISOString() : (v || _agoraISO()); }
+
+// Migração 22/09/26: converte as células de data gravadas como Date (deslocadas
+// pelo fuso da planilha) em texto ISO correto. Mede o desvio REAL com um
+// ida-e-volta numa aba de rascunho e aplica a todas. Idempotente: só toca célula
+// que ainda é Date. body.teste=true só mede e devolve o desvio.
+function _corrigirDatas(body) {
+  if (!body.senha || body.senha !== _segredo('SENHA')) return _json({ok: false, erro: 'senha inválida'});
+  var ss = SpreadsheetApp.getActive();
+  var tmp = ss.insertSheet('_tz_tmp_' + Date.now());
+  var ref = new Date();
+  tmp.getRange(1, 1).setValue(ref);
+  SpreadsheetApp.flush();
+  var lido = tmp.getRange(1, 1).getValue();
+  ss.deleteSheet(tmp);
+  var desvioMs = (lido instanceof Date) ? ref.getTime() - lido.getTime() : 0;
+  var alvos = [[ABA_CONTAGENS, CAB_CONTAGENS, 'recebido_em'],
+               [ABA_BASES_META, CAB_BASES_META, 'enviado_em'],
+               [ABA_HIST, CAB_HIST, 'enviado_em'],
+               [ABA_EST_META, CAB_EST_META, 'gerado_em']];
+  var resumo = {ok: true, desvio_h: Math.round(desvioMs / 36e4) / 10, teste: !!body.teste, abas: {}};
+  if (body.teste) return _json(resumo);
+  alvos.forEach(function (a) {
+    var sh = _aba(a[0], a[1]), col = a[1].indexOf(a[2]) + 1, n = sh.getLastRow() - 1, feitas = 0;
+    // coluna inteira como texto: linhas novas (appendRow) herdam e não viram Date
+    sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+    if (n < 1) { resumo.abas[a[0]] = 0; return; }
+    var rng = sh.getRange(2, col, n, 1), vals = rng.getValues();
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i][0];
+      if (v instanceof Date) { vals[i][0] = new Date(v.getTime() + desvioMs).toISOString(); feitas++; }
+    }
+    if (feitas) rng.setValues(vals);
+    resumo.abas[a[0]] = feitas;
+  });
+  return _json(resumo);
+}
+
+// Apaga UMA contagem (e seus itens/fabricante) — uso administrativo (senha),
+// p.ex. pra tirar contagem de teste da planilha.
+function _apagarContagemAdmin(body) {
+  if (!body.senha || body.senha !== _segredo('SENHA')) return _json({ok: false, erro: 'senha inválida'});
+  if (!body.id) return _json({ok: false, erro: 'id obrigatório'});
+  var shC = _aba(ABA_CONTAGENS, CAB_CONTAGENS), shI = _aba(ABA_ITENS, CAB_ITENS);
+  _apagarContagem(shC, shI, String(body.id));   // já limpa itens + fabricante
+  return _json({ok: true, id: body.id});
+}
+
 function _json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
       .setMimeType(ContentService.MimeType.JSON);
@@ -124,6 +175,8 @@ function doPost(e) {
     if (body.action === 'deleteBase') return _deleteBase(body);
     if (body.action === 'upload_estoque') return _uploadEstoque(body);
     if (body.action === 'arquivar_limpar') return _arquivarLimpar(body);
+    if (body.action === 'corrigir_datas') return _corrigirDatas(body);
+    if (body.action === 'apagar_contagem') return _apagarContagemAdmin(body);
     if (!body.token || body.token !== _segredo('TOKEN_ENVIO')) {
       return _json({ok: false, erro: 'token inválido'});
     }
@@ -162,7 +215,7 @@ function doPost(e) {
       shF.getRange(shF.getLastRow() + 1, 1, linhasFab.length, CAB_FAB.length)
          .setValues(linhasFab);
     }
-    shC.appendRow([c.id, new Date(), c.origem || '', c.modo, c.nome || '',
+    shC.appendRow([c.id, _agoraISO(), c.origem || '', c.modo, c.nome || '',
                    c.numContagem || '', c.conferente || '', c.data || '',
                    c.status || '', c.locacao || '', c.itens.length,
                    c.totalBipes || '', divergencias, fab.length]);
@@ -220,10 +273,10 @@ function _uploadBase(body) {
     if (String(vals[i][0]) === body.tipo) shM.deleteRow(i + 1);
   }
   var agora = new Date();
-  shM.appendRow([body.tipo, agora, body.por || '', body.pecas.length]);
+  shM.appendRow([body.tipo, agora.toISOString(), body.por || '', body.pecas.length]);
   // guarda a versão no histórico (mantém TODAS)
   var versaoId = body.tipo + '-' + agora.getTime();
-  _aba(ABA_HIST, CAB_HIST).appendRow([versaoId, body.tipo, agora,
+  _aba(ABA_HIST, CAB_HIST).appendRow([versaoId, body.tipo, agora.toISOString(),
                                       body.por || '', body.pecas.length]);
   _escreverBlob(versaoId, body.pecas);
   return _json({ok: true, n: body.pecas.length, versao_id: versaoId});
@@ -247,7 +300,7 @@ function _gravarPerTipo(tipo, pecas, ver) {
   for (var i = mv.length - 1; i >= 1; i--) {
     if (String(mv[i][0]) === tipo) shM.deleteRow(i + 1);
   }
-  shM.appendRow([tipo, (ver && ver.enviado_em) || new Date(),
+  shM.appendRow([tipo, _iso(ver && ver.enviado_em),
                  (ver && ver.por) || '', pecas.length]);
 }
 function _limparPerTipo(tipo) {
@@ -273,7 +326,7 @@ function _migrarHist() {
     if (!pecas.length) return;
     var ts = m.enviado_em ? new Date(m.enviado_em) : new Date();
     var vid = t + '-' + ts.getTime();
-    _aba(ABA_HIST, CAB_HIST).appendRow([vid, t, ts, m.por || '', pecas.length]);
+    _aba(ABA_HIST, CAB_HIST).appendRow([vid, t, ts.toISOString(), m.por || '', pecas.length]);
     _escreverBlob(vid, pecas);
     feitos.push({tipo: t, versao_id: vid, n: pecas.length});
   });
@@ -290,7 +343,7 @@ function _uploadEstoque(body) {
   var shM = _aba(ABA_EST_META, CAB_EST_META);
   shM.clearContents();
   shM.appendRow(CAB_EST_META);
-  shM.appendRow([new Date(), body.pecas.length, body.por || '']);
+  shM.appendRow([_agoraISO(), body.pecas.length, body.por || '']);
   return _json({ok: true, n: body.pecas.length});
 }
 function _metaEstoque() {
@@ -350,7 +403,9 @@ function _deleteBase(body) {
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
-  if (p.action === 'ping') return _json({ok: true, servico: 'inventario-mc'});
+  if (p.action === 'ping') return _json({ok: true, servico: 'inventario-mc',
+    tz_script: Session.getScriptTimeZone(),
+    tz_planilha: SpreadsheetApp.getActive().getSpreadsheetTimeZone()});
   if (p.action === 'getBase') {
     if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
     var cfgB = BASES[p.tipo];
