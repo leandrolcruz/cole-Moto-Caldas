@@ -97,9 +97,24 @@
   .row .d b{display:block;font-size:14.5px;font-weight:700;line-height:1.25}
   .row .d span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--ink2)}
   .row .q{font-family:var(--disp);font-size:28px;color:var(--red);min-width:36px;text-align:right}
-  .sec{margin:22px 0 10px;display:flex;align-items:baseline;justify-content:space-between}
+  .sec{margin:22px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .sec .l{display:flex;flex-direction:column;gap:2px;min-width:0}
   .sec h2{font-family:var(--disp);font-size:26px;letter-spacing:.03em}
   .sec small{font-size:12px;color:var(--ink2);font-weight:600}
+  .sec .r{display:flex;align-items:center;gap:10px}
+  .seg{display:inline-flex;background:var(--paper2);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .seg button{all:unset;cursor:pointer;font:700 12px var(--body);padding:6px 12px;border-radius:999px;color:var(--ink2);transition:background .15s,color .15s}
+  .seg button.on{background:var(--ink);color:#fff}
+  .lista-v{display:none;flex-direction:column;gap:12px;margin-top:6px}
+  .lista-v.on{display:flex}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;animation:rise .35s cubic-bezier(.2,.8,.2,1) both}
+  .bloco .bh{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--ink);color:#fff}
+  .bloco .bh.expo{background:var(--red)}
+  .bloco .bh .bn{font-family:var(--disp);font-size:34px;line-height:1;letter-spacing:.02em}
+  .bloco .bh .bi{font-size:11.5px;font-weight:600;opacity:.85;line-height:1.35}
+  .bloco .bh .bt{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.14);padding:5px 9px;border-radius:8px;white-space:nowrap}
+  .bloco .row:first-of-type{border-top:0}
+  .bloco .vazio{padding:12px 16px;color:var(--ink3);font-size:13px}
   .skel{height:110px;border-radius:16px;background:linear-gradient(90deg,var(--paper2),#fff,var(--paper2));background-size:200% 100%;animation:sh 1.1s linear infinite}
   .err{background:var(--red-soft);border:1px solid #F3B9BD;color:var(--red2);border-radius:14px;padding:14px 16px;font-weight:600}
   .err button{all:unset;cursor:pointer;text-decoration:underline;margin-left:8px}
@@ -130,7 +145,8 @@
 <main>
   <div class="res" id="res"></div>
   <div id="mapa">
-    <div class="sec"><h2>Prateleiras</h2><small id="tot"></small></div>
+    <div class="sec"><div class="l"><h2>Prateleiras</h2><small id="tot"></small></div><div class="r"><div class="seg" role="tablist"><button id="vg" class="on" onclick="modo('grade')">Grade</button><button id="vl" onclick="modo('lista')">Lista</button></div></div></div>
+    <div class="lista-v" id="lista"></div>
     <div class="grid" id="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
   </div>
 </main>
@@ -143,6 +159,29 @@ var API='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWsp
 var TOKEN='mc-inv-2026';
 var ORDEM=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
 var dados=null,indice=[],aberta=null;
+var vista='grade';try{vista=localStorage.getItem('prat_vista')||'grade'}catch(e){}
+var ORDEM_LISTA=['Exposição'].concat(ORDEM.filter(function(l){return l!=='Exposição'}));
+function modo(v){vista=v;try{localStorage.setItem('prat_vista',v)}catch(e){}aplicarVista()}
+function aplicarVista(){
+  var lista=vista==='lista';
+  document.getElementById('vg').className=lista?'':'on';document.getElementById('vl').className=lista?'on':'';
+  document.getElementById('grid').style.display=lista?'none':'';
+  document.getElementById('lista').className='lista-v'+(lista?' on':'');
+}
+function renderLista(){
+  var by={};dados.locais.forEach(function(l){by[l.loc]=l});
+  var h='';ORDEM_LISTA.forEach(function(loc,k){
+    var l=by[loc],expo=loc==='Exposição',num=numDe(loc),un=0;if(l)l.itens.forEach(function(x){un+=x.qtd});
+    var itens=l?l.itens.slice().sort(function(a,b){return (a.descricao||a.codigo)<(b.descricao||b.codigo)?-1:1}):[];
+    h+='<div class="bloco" style="animation-delay:'+(k*30)+'ms"><div class="bh'+(expo?' expo':'')+'"><div class="bn">'+(expo?'Exposição':num)+'</div>'+
+       '<div class="bi">'+(expo?'Vitrine':'Prateleira '+num)+'<br>'+(l?(un+' capacete'+(un!==1?'s':'')+' · '+l.itens.length+' modelo'+(l.itens.length!==1?'s':'')):'não contada')+'</div>'+
+       (l?'<div class="bt">'+fmt(l.recebido_em)+'</div>':'')+'</div>';
+    if(!itens.length)h+='<div class="vazio">'+(l?'Nada bipado aqui.':'Ainda não contada.')+'</div>';
+    itens.forEach(function(i){h+='<div class="row"><div class="d"><b>'+esc(i.descricao||i.codigo)+'</b><span>'+esc(i.codigo)+'</span></div><div class="q">'+i.qtd+'</div></div>'});
+    h+='</div>';
+  });
+  document.getElementById('lista').innerHTML=h;
+}
 
 function norm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -187,6 +226,7 @@ function renderGrid(){
       '<div class="k">'+(expo?'Vitrine':'Prateleira')+'</div><div class="n'+(expo?' txt':'')+'">'+(expo?'Exposição':num)+'</div>'+s+'</div>';
   });
   document.getElementById('grid').innerHTML=h;
+  renderLista();aplicarVista();
   renderPanel();
 }
 function abrir(loc){aberta=(aberta===loc?null:loc);renderGrid();document.body.style.overflow=aberta?'hidden':''}
