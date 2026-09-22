@@ -1,4 +1,4 @@
-var CACHE_NAME = 'inv-motocaldas-v28';
+var CACHE_NAME = 'inv-motocaldas-v29';
 var urlsToCache = [
   './',
   './index.html',
@@ -38,7 +38,8 @@ self.addEventListener('fetch', function(event) {
   // Catálogo embutido e dashboard: sempre da rede (dashboard é ferramenta de PC
   // online — cache-first segurava updates até o bump de versão)
   if (event.request.url.indexOf('catalogo.') !== -1 ||
-      event.request.url.indexOf('dashboard') !== -1) {
+      event.request.url.indexOf('dashboard') !== -1 ||
+      event.request.url.indexOf('prateleiras') !== -1) {
     event.respondWith(fetch(event.request));
     return;
   }

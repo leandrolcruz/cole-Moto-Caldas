@@ -219,6 +219,7 @@ function doPost(e) {
                    c.numContagem || '', c.conferente || '', c.data || '',
                    c.status || '', c.locacao || '', c.itens.length,
                    c.totalBipes || '', divergencias, fab.length]);
+    try { CacheService.getScriptCache().remove('mapa_prateleiras'); } catch (err) {}
     return _json({ok: true, itens: linhas.length, divergencias: divergencias,
                   fab: fab.length});
   } catch (err) {
@@ -406,6 +407,18 @@ function doGet(e) {
   if (p.action === 'ping') return _json({ok: true, servico: 'inventario-mc',
     tz_script: Session.getScriptTimeZone(),
     tz_planilha: SpreadsheetApp.getActive().getSpreadsheetTimeZone()});
+  if (p.action === 'getMapa') {
+    // Mapa das prateleiras (página pública das vendas): contagem mais recente
+    // de cada prateleira + itens, numa chamada só. Cache 3 min (invalidado ao
+    // receber contagem). &nocache=1 força recalcular.
+    if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
+    var cache = CacheService.getScriptCache(), hit = p.nocache ? null : cache.get('mapa_prateleiras');
+    if (!hit) {
+      hit = JSON.stringify(_mapaPrateleiras());
+      try { cache.put('mapa_prateleiras', hit, 180); } catch (err) {}
+    }
+    return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
+  }
   if (p.action === 'getBase') {
     if (!_autorizado(p)) return _json({ok: false, erro: 'não autorizado'});
     var cfgB = BASES[p.tipo];
@@ -500,6 +513,41 @@ function doGet(e) {
     return _json({ok: true, itens: itens, fab: fab});
   }
   return _json({ok: false, erro: 'ação desconhecida'});
+}
+
+function _ehPrateleira(loc) {
+  loc = String(loc || '');
+  return /^Prateleira \d+$/.test(loc) || loc === 'Exposição';
+}
+// Contagem MAIS RECENTE de cada prateleira (modo locacao, locacao 'Prateleira N'
+// ou 'Exposição') + itens com contado>0. Uma passada em cada aba.
+function _mapaPrateleiras() {
+  var shC = _aba(ABA_CONTAGENS, CAB_CONTAGENS), vals = shC.getDataRange().getValues();
+  var iLoc = CAB_CONTAGENS.indexOf('locacao'), iRec = CAB_CONTAGENS.indexOf('recebido_em'),
+      iMod = CAB_CONTAGENS.indexOf('modo'), iConf = CAB_CONTAGENS.indexOf('conferente');
+  var recente = {};
+  for (var i = 1; i < vals.length; i++) {
+    var r = vals[i];
+    if (String(r[iMod]) !== 'locacao' || !_ehPrateleira(r[iLoc])) continue;
+    var t = new Date(r[iRec]).getTime() || 0, loc = String(r[iLoc]);
+    if (!recente[loc] || t > recente[loc].t) {
+      recente[loc] = {t: t, id: String(r[0]), recebido_em: _iso(r[iRec]), conferente: String(r[iConf] || '')};
+    }
+  }
+  var porId = {};
+  Object.keys(recente).forEach(function (l) { porId[recente[l].id] = l; });
+  var shI = _aba(ABA_ITENS, CAB_ITENS), tudo = shI.getDataRange().getValues(), itens = {};
+  for (var j = 1; j < tudo.length; j++) {
+    var loc2 = porId[String(tudo[j][0])];
+    if (!loc2) continue;
+    var q = Number(tudo[j][5]) || 0;
+    if (q <= 0) continue;
+    (itens[loc2] = itens[loc2] || []).push({codigo: String(tudo[j][1]), descricao: String(tudo[j][2] || ''), qtd: q});
+  }
+  var locais = Object.keys(recente).map(function (l) {
+    return {loc: l, recebido_em: recente[l].recebido_em, conferente: recente[l].conferente, itens: itens[l] || []};
+  });
+  return {ok: true, gerado_em: _agoraISO(), locais: locais};
 }
 
 function _metaBase(tipo) {

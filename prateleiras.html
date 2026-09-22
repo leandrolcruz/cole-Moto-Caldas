@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F4F1EA">
+<title>Onde está o capacete? · Moto Caldas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F1EA;--paper2:#ECE8DF;--card:#FFFFFF;--ink:#14161A;--ink2:#4A505B;--ink3:#8A9099;
+    --line:#DAD5C8;--red:#D8121C;--red2:#B30D16;--red-soft:#FCE9EA;--ok:#1F8A4C;
+    --disp:'Bebas Neue','Oswald','Impact',sans-serif;--body:'Manrope',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{background:var(--paper)}
+  body{font-family:var(--body);color:var(--ink);background:
+       radial-gradient(1200px 500px at 90% -10%,rgba(216,18,28,.07),transparent 60%),var(--paper);
+       min-height:100vh;padding-bottom:64px}
+  /* faixa de sinalização */
+  .stripe{height:8px;background:repeating-linear-gradient(135deg,var(--red) 0 22px,var(--ink) 22px 44px)}
+  header{padding:22px 18px 8px;max-width:760px;margin:0 auto}
+  .brand{display:flex;align-items:baseline;gap:10px;color:var(--ink2);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+  .brand i{display:inline-block;width:10px;height:10px;background:var(--red);transform:rotate(45deg)}
+  h1{font-family:var(--disp);font-size:clamp(46px,12vw,84px);line-height:.92;letter-spacing:.01em;margin-top:8px;color:var(--ink)}
+  h1 span{color:var(--red)}
+  .meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px;color:var(--ink2)}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-weight:600}
+  .chip.ok::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:7px;vertical-align:1px}
+  .chip button{all:unset;cursor:pointer;color:var(--red);font-weight:800;margin-left:6px}
+  /* busca fixa */
+  .searchwrap{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 18px 12px;box-shadow:0 8px 16px -14px rgba(20,22,26,.35)}
+  .search{max-width:760px;margin:0 auto;position:relative}
+  .search input{width:100%;font:600 20px/1.2 var(--body);padding:18px 54px 18px 20px;border:2px solid var(--ink);border-radius:16px;background:var(--card);
+    color:var(--ink);outline:none;box-shadow:0 10px 30px -18px rgba(20,22,26,.45);transition:border-color .15s,box-shadow .15s}
+  .search input::placeholder{color:var(--ink3);font-weight:500}
+  .search input::-webkit-search-cancel-button,.search input::-webkit-search-decoration{-webkit-appearance:none;display:none}
+  .search input:focus{border-color:var(--red);box-shadow:0 0 0 4px var(--red-soft),0 10px 30px -18px rgba(20,22,26,.45)}
+  .search .x{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:var(--paper2);
+    color:var(--ink2);font-size:18px;font-weight:800;cursor:pointer;display:none;align-items:center;justify-content:center}
+  .search .x.on{display:flex}
+  .hint{max-width:760px;margin:0 auto 14px;font-size:12px;color:var(--ink3);padding:0 22px}
+  main{max-width:760px;margin:0 auto;padding:0 18px}
+  /* resultados */
+  .res{display:none;flex-direction:column;gap:10px}
+  .res.on{display:flex}
+  .rcount{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin:4px 0 2px}
+  .hit{display:grid;grid-template-columns:1fr auto;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    animation:rise .32s cubic-bezier(.2,.8,.2,1) both}
+  .hit .info{padding:16px 16px 14px;min-width:0}
+  .hit .desc{font-weight:800;font-size:17px;line-height:1.2;letter-spacing:-.01em}
+  .hit .cod{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--ink2);margin-top:6px;letter-spacing:.04em}
+  .hit .also{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+  .hit .also b{font-size:11.5px;font-weight:700;background:var(--paper2);border-radius:8px;padding:4px 8px;color:var(--ink2)}
+  .tag{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:112px;padding:10px 14px;background:var(--red);color:#fff;text-align:center}
+  .tag .lbl{font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+  .tag .num{font-family:var(--disp);font-size:54px;line-height:.9;margin:2px 0}
+  .tag .num.txt{font-size:26px;line-height:1;margin:8px 0}
+  .tag .qty{font-size:12px;font-weight:700;background:rgba(0,0,0,.18);border-radius:999px;padding:3px 9px;margin-top:4px}
+  .tag.expo{background:var(--ink)}
+  .empty{background:var(--card);border:1px dashed var(--line);border-radius:18px;padding:28px 18px;text-align:center;color:var(--ink2)}
+  .empty b{display:block;font-family:var(--disp);font-size:30px;color:var(--ink);letter-spacing:.02em;margin-bottom:6px}
+  /* grade das prateleiras */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+  @media(min-width:520px){.grid{grid-template-columns:repeat(4,1fr)}}
+  @media(min-width:700px){.grid{grid-template-columns:repeat(5,1fr)}}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 10px;cursor:pointer;position:relative;overflow:hidden;
+    transition:transform .15s,box-shadow .15s,border-color .15s;animation:rise .4s cubic-bezier(.2,.8,.2,1) both}
+  .tile:hover,.tile:focus-visible{transform:translateY(-2px);box-shadow:0 14px 30px -20px rgba(20,22,26,.5);border-color:var(--ink);outline:none}
+  .tile.open{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+  .tile .k{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+  .tile .n{font-family:var(--disp);font-size:52px;line-height:.95;margin:2px 0 4px;color:var(--ink)}
+  .tile .n.txt{font-size:30px;line-height:1.1;margin:8px 0 8px}
+  .tile .s{font-size:12px;color:var(--ink);font-weight:800;white-space:nowrap}
+  .tile .s2{font-size:11px;color:var(--ink2);font-weight:600;white-space:nowrap;margin-top:1px}
+  .tile.vazia .n{color:var(--ink3)}
+  .tile.vazia .s{color:var(--ink3)}
+  .tile.expo{grid-column:span 2;background:var(--ink);border-color:var(--ink)}
+  .tile.expo .k,.tile.expo .s2{color:#C9CCD3}.tile.expo .s,.tile.expo .n{color:#fff}
+  .tile::after{content:'';position:absolute;right:-18px;bottom:-18px;width:54px;height:54px;border-radius:50%;background:var(--red-soft);opacity:0;transition:opacity .2s}
+  .tile:hover::after{opacity:1}
+  /* painel da prateleira aberta */
+  .veil{display:none;position:fixed;inset:0;background:rgba(20,22,26,.45);z-index:40;backdrop-filter:blur(2px)}
+  .veil.on{display:block}
+  .panel{display:none;position:fixed;left:0;right:0;bottom:0;z-index:50;max-height:82vh;max-width:760px;margin:0 auto;background:var(--card);border-radius:22px 22px 0 0;overflow:hidden;box-shadow:0 -20px 60px -20px rgba(20,22,26,.6);animation:up .28s cubic-bezier(.2,.8,.2,1) both;flex-direction:column}
+  .panel.on{display:flex}
+  .panel .lista{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom)}
+  .panel .ph{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--ink);color:#fff;flex-shrink:0}
+  .panel .ph.expo{background:var(--red)}
+  .panel .ph .t{font-family:var(--disp);font-size:30px;letter-spacing:.02em;line-height:1}
+  .panel .ph .t small{font-family:var(--body);font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.75;display:block;margin-bottom:2px}
+  .panel .ph button{all:unset;cursor:pointer;font-weight:800;font-size:13px;background:rgba(255,255,255,.14);padding:8px 12px;border-radius:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
+  .row .d{flex:1;min-width:0}
+  .row .d b{display:block;font-size:14.5px;font-weight:700;line-height:1.25}
+  .row .d span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--ink2)}
+  .row .q{font-family:var(--disp);font-size:28px;color:var(--red);min-width:36px;text-align:right}
+  .sec{margin:22px 0 10px;display:flex;align-items:baseline;justify-content:space-between}
+  .sec h2{font-family:var(--disp);font-size:26px;letter-spacing:.03em}
+  .sec small{font-size:12px;color:var(--ink2);font-weight:600}
+  .skel{height:110px;border-radius:16px;background:linear-gradient(90deg,var(--paper2),#fff,var(--paper2));background-size:200% 100%;animation:sh 1.1s linear infinite}
+  .err{background:var(--red-soft);border:1px solid #F3B9BD;color:var(--red2);border-radius:14px;padding:14px 16px;font-weight:600}
+  .err button{all:unset;cursor:pointer;text-decoration:underline;margin-left:8px}
+  footer{max-width:760px;margin:30px auto 0;padding:0 18px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes sh{to{background-position:-200% 0}}
+  @keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<header>
+  <div class="brand"><i></i> Moto Caldas · Capacetes</div>
+  <h1>Onde está<br>o <span>capacete?</span></h1>
+  <div class="meta" id="meta"><span class="chip">carregando o mapa…</span></div>
+</header>
+
+<div class="searchwrap">
+  <div class="search">
+    <input id="q" type="search" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+           placeholder="Código ou nome — ex.: joy azul 56" oninput="buscar()" aria-label="Buscar capacete">
+    <button class="x" id="x" onclick="limpar()" aria-label="Limpar">×</button>
+  </div>
+</div>
+<div class="hint">Pode digitar só parte do nome ou do código. Tudo o que está nas prateleiras entra na busca.</div>
+
+<main>
+  <div class="res" id="res"></div>
+  <div id="mapa">
+    <div class="sec"><h2>Prateleiras</h2><small id="tot"></small></div>
+    <div class="grid" id="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  </div>
+</main>
+<div class="veil" id="veil" onclick="abrir(aberta)"></div>
+<div class="panel" id="panel" role="dialog" aria-modal="true"></div>
+<footer>Mapa montado pela contagem mais recente de cada prateleira nas coletoras. Se um capacete não aparece, ele não foi bipado em nenhuma prateleira ainda — confira com o estoque. Atualiza sozinho a cada 5 minutos.</footer>
+
+<script>
+var API='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
+var TOKEN='mc-inv-2026';
+var ORDEM=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
+var dados=null,indice=[],aberta=null;
+
+function norm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function numDe(loc){var m=/(\d+)$/.exec(loc);return m?m[1]:null}
+function fmt(iso){if(!iso)return'';var d=new Date(iso);if(isNaN(d))return String(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+
+function carregar(force){
+  var meta=document.getElementById('meta');
+  meta.innerHTML='<span class="chip">'+(force?'atualizando…':'carregando o mapa…')+'</span>';
+  return fetch(API+'?action=getMapa&token='+encodeURIComponent(TOKEN)+(force?'&nocache=1':''),{cache:'no-store'})
+  .then(function(r){return r.json()}).then(function(j){
+    if(!j||!j.ok)throw new Error((j&&j.erro)||'resposta inválida');
+    dados=j;montarIndice();renderMeta();renderGrid();buscar();
+  }).catch(function(e){
+    meta.innerHTML='<span class="chip" style="border-color:#F3B9BD;color:var(--red2)">não consegui carregar<button onclick="carregar(true)">tentar de novo</button></span>';
+    document.getElementById('grid').innerHTML='<div class="err" style="grid-column:1/-1">Sem conexão com o mapa agora.<button onclick="carregar(true)">Tentar de novo</button></div>';
+  });
+}
+function montarIndice(){
+  var porCod={};
+  (dados.locais||[]).forEach(function(l){(l.itens||[]).forEach(function(i){
+    var k=i.codigo;if(!porCod[k])porCod[k]={codigo:i.codigo,desc:i.descricao||'',locs:[],chave:''};
+    if(i.descricao&&i.descricao.length>porCod[k].desc.length)porCod[k].desc=i.descricao;
+    porCod[k].locs.push({loc:l.loc,qtd:i.qtd});
+  })});
+  indice=Object.keys(porCod).map(function(k){var o=porCod[k];o.locs.sort(function(a,b){return b.qtd-a.qtd});o.chave=norm(o.codigo+' '+o.desc);return o});
+}
+function ultimaData(){var t=0,iso='';(dados.locais||[]).forEach(function(l){var d=new Date(l.recebido_em).getTime()||0;if(d>t){t=d;iso=l.recebido_em}});return iso}
+function renderMeta(){
+  var n=dados.locais.length,un=0,cods=indice.length;dados.locais.forEach(function(l){l.itens.forEach(function(i){un+=i.qtd})});
+  document.getElementById('meta').innerHTML='<span class="chip ok">'+cods+' modelos · '+un+' capacetes nas prateleiras</span>'+
+    '<span class="chip">última contagem '+fmt(ultimaData())+'<button onclick="carregar(true)" title="Atualizar">↻</button></span>';
+  document.getElementById('tot').textContent=n+' de '+ORDEM.length+' locais contados';
+}
+function renderGrid(){
+  var by={};dados.locais.forEach(function(l){by[l.loc]=l});
+  var h='';ORDEM.forEach(function(loc,i){
+    var l=by[loc],num=numDe(loc),expo=loc==='Exposição',un=0;if(l)l.itens.forEach(function(x){un+=x.qtd});
+    var s=l?('<div class="s">'+un+' capacete'+(un!==1?'s':'')+'</div><div class="s2">'+l.itens.length+' modelo'+(l.itens.length!==1?'s':'')+'</div>'):'<div class="s2">não contada</div>';
+    h+='<div class="tile'+(expo?' expo':'')+(l?'':' vazia')+(aberta===loc?' open':'')+'" tabindex="0" style="animation-delay:'+(i*28)+'ms" onclick="abrir(\''+loc+'\')" onkeydown="if(event.key===\'Enter\')abrir(\''+loc+'\')">'+
+      '<div class="k">'+(expo?'Vitrine':'Prateleira')+'</div><div class="n'+(expo?' txt':'')+'">'+(expo?'Exposição':num)+'</div>'+s+'</div>';
+  });
+  document.getElementById('grid').innerHTML=h;
+  renderPanel();
+}
+function abrir(loc){aberta=(aberta===loc?null:loc);renderGrid();document.body.style.overflow=aberta?'hidden':''}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&aberta)abrir(aberta)});
+function renderPanel(){
+  var p=document.getElementById('panel'),v=document.getElementById('veil');if(!aberta){p.className='panel';v.className='veil';p.innerHTML='';return}
+  var l=null;dados.locais.forEach(function(x){if(x.loc===aberta)l=x});
+  var itens=l?l.itens.slice().sort(function(a,b){return (a.descricao||a.codigo)<(b.descricao||b.codigo)?-1:1}):[];
+  var h='<div class="ph'+(aberta==='Exposição'?' expo':'')+'"><div class="t"><small>'+(l?'contada '+fmt(l.recebido_em)+(l.conferente?' · '+esc(l.conferente):''):'sem contagem')+'</small>'+esc(aberta)+'</div><button onclick="abrir(\''+aberta+'\')">fechar</button></div>';
+  h+='<div class="lista">';
+  if(!itens.length)h+='<div class="row"><div class="d"><b>Nada bipado aqui ainda.</b></div></div>';
+  itens.forEach(function(i){h+='<div class="row"><div class="d"><b>'+esc(i.descricao||i.codigo)+'</b><span>'+esc(i.codigo)+'</span></div><div class="q">'+i.qtd+'</div></div>'});
+  h+='</div>';
+  p.className='panel on';v.className='veil on';p.innerHTML=h;
+}
+function tagHTML(loc,qtd){
+  var expo=loc==='Exposição',num=numDe(loc);
+  return '<div class="tag'+(expo?' expo':'')+'"><div class="lbl">'+(expo?'Vitrine':'Prateleira')+'</div><div class="num'+(expo?' txt':'')+'">'+(expo?'Exposição':num)+'</div><div class="qty">'+qtd+' un</div></div>';
+}
+function buscar(){
+  var q=norm(document.getElementById('q').value.trim());
+  var res=document.getElementById('res'),mapa=document.getElementById('mapa');
+  document.getElementById('x').className='x'+(q?' on':'');
+  if(!q||!dados){res.className='res';res.innerHTML='';mapa.style.display='';return}
+  var termos=q.split(/\s+/).filter(Boolean);
+  var hits=indice.filter(function(o){return termos.every(function(t){return o.chave.indexOf(t)!==-1})});
+  hits.sort(function(a,b){var ea=norm(a.codigo).indexOf(q)===0?0:1,eb=norm(b.codigo).indexOf(q)===0?0:1;return ea-eb||(a.desc<b.desc?-1:1)});
+  mapa.style.display='none';res.className='res on';
+  if(!hits.length){res.innerHTML='<div class="empty"><b>Não achei</b>Nenhum capacete com "'+esc(document.getElementById('q').value.trim())+'" nas prateleiras. Tenta outra palavra ou parte do código.</div>';return}
+  var h='<div class="rcount">'+hits.length+' resultado'+(hits.length>1?'s':'')+'</div>';
+  hits.slice(0,60).forEach(function(o,i){
+    var p=o.locs[0],outros=o.locs.slice(1);
+    h+='<div class="hit" style="animation-delay:'+(i*22)+'ms"><div class="info"><div class="desc">'+esc(o.desc||o.codigo)+'</div><div class="cod">'+esc(o.codigo)+'</div>'+
+      (outros.length?'<div class="also">'+outros.map(function(x){return '<b>também: '+esc(x.loc)+' ('+x.qtd+')</b>'}).join('')+'</div>':'')+'</div>'+tagHTML(p.loc,p.qtd)+'</div>';
+  });
+  if(hits.length>60)h+='<div class="rcount">mostrando 60 de '+hits.length+' — refine a busca</div>';
+  res.innerHTML=h;
+}
+function limpar(){var i=document.getElementById('q');i.value='';buscar();i.focus()}
+carregar(false);
+setInterval(function(){if(!document.hidden)carregar(false)},5*60*1000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&dados)carregar(false)});
+</script>
+</body>
+</html>
