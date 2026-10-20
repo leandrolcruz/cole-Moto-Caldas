@@ -214,6 +214,11 @@ function doPost(e) {
     var shI = _aba(ABA_ITENS, CAB_ITENS);
     var categoria = CATEGORIAS.indexOf(c.categoria) >= 0 ? c.categoria
                     : _categoriaDe(c.modo, c.locacao, '', _tiposDaBase());
+    if (categoria === 'livre' || c.modo === 'livre') {
+      var bip = c.itens.filter(function (it) { return it.qtd !== null && it.qtd !== undefined && it.qtd !== ''; })
+                       .map(function (it) { return it.codigo || ''; });
+      categoria = _refinarLivre(c.nome, _fracCapacete(bip, _codigosCapacete()));
+    }
 
     // idempotência: reenvio da mesma contagem substitui a anterior
     _apagarContagem(shC, shI, c.id);
@@ -316,9 +321,47 @@ function _tiposDaBase() {
 // Categoria da contagem. Gravada (v30+) vence; nas antigas: modo próprio
 // (diaria/roupa/livre), "Prateleira N"/"Exposição" = prateleira, o grupo único
 // "TODOS OS CAPACETES" = capacetes, nome de tipo da base = tipo, o resto = locação.
-function _categoriaDe(modo, locacao, gravada, tipos) {
+// MODO LIVRE (dados reais, out/26): a equipe conta capacete todo dia pela
+// Contagem Livre ("Cap-Luiz", "1° Cap - Victor") e endereço por endereço
+// ("03A12C-joao"). Então o livre é refinado: >=80% dos códigos bipados na base
+// de capacetes = capacetes; nome começando por endereço = locação; resto = livre.
+var RE_ENDERECO = /^\s*(\d{2}[A-Z]\d{2}[A-Z]?)(?![0-9A-Z])/i;
+function _enderecoDoNome(nome) { var m = String(nome || '').match(RE_ENDERECO); return m ? m[1].toUpperCase() : ''; }
+function _refinarLivre(nome, fracCap) {
+  if (fracCap !== null && fracCap !== undefined && fracCap >= 0.8) return 'capacetes';
+  if (_enderecoDoNome(nome)) return 'locacao';
+  return 'livre';
+}
+function _codigosCapacete() {
+  var cfg = BASES.capacetes, v = _aba(cfg.aba, cfg.cab).getDataRange().getValues(), out = {};
+  for (var i = 1; i < v.length; i++) { var c = String(v[i][0] || '').trim().toUpperCase(); if (c) out[c] = true; }
+  return out;
+}
+function _fracCapacete(codigos, cap) {
+  if (!codigos.length) return null;
+  var n = 0; codigos.forEach(function (c) { if (cap[String(c).trim().toUpperCase()]) n++; });
+  return n / codigos.length;
+}
+// Fração de códigos de capacete das contagens LIVRES ainda sem categoria
+// gravada, {id: fração}. Uma passada na aba itens.
+function _fracsLivres(vals) {
+  var iCat = CAB_CONTAGENS.indexOf('categoria'), iMod = CAB_CONTAGENS.indexOf('modo'), livres = {}, fracs = {};
+  for (var q = 1; q < vals.length; q++) {
+    if (CATEGORIAS.indexOf(String(vals[q][iCat] || '')) < 0 && String(vals[q][iMod]) === 'livre') livres[String(vals[q][0])] = [];
+  }
+  if (!Object.keys(livres).length) return fracs;
+  var cap = _codigosCapacete(), t = _aba(ABA_ITENS, CAB_ITENS).getDataRange().getValues();
+  for (var a = 1; a < t.length; a++) {
+    var id = String(t[a][0]);
+    if (livres[id] && t[a][5] !== '' && t[a][5] !== null) livres[id].push(t[a][1]);
+  }
+  Object.keys(livres).forEach(function (k) { fracs[k] = _fracCapacete(livres[k], cap); });
+  return fracs;
+}
+function _categoriaDe(modo, locacao, gravada, tipos, nome, fracCap) {
   if (CATEGORIAS.indexOf(String(gravada || '')) >= 0) return String(gravada);
   modo = String(modo || '');
+  if (modo === 'livre') return _refinarLivre(nome, fracCap);
   if (modo && modo !== 'locacao') return CATEGORIAS.indexOf(modo) >= 0 ? modo : 'livre';
   var loc = String(locacao || '').trim();
   if (_ehPrateleira(loc)) return 'prateleira';
@@ -455,9 +498,11 @@ function _arquivarLimpar(body) {
   }
   var shC = _aba(ABA_CONTAGENS, CAB_CONTAGENS), vals = shC.getDataRange().getValues();
   var iMod = CAB_CONTAGENS.indexOf('modo'), iLoc = CAB_CONTAGENS.indexOf('locacao'),
-      iCat = CAB_CONTAGENS.indexOf('categoria'), tipos = _tiposDaBase(), sai = {}, n = 0;
+      iCat = CAB_CONTAGENS.indexOf('categoria'), tipos = _tiposDaBase(), sai = {}, n = 0,
+      fracs = _fracsLivres(vals);
   for (var i = 1; i < vals.length; i++) {
-    var cat = _categoriaDe(vals[i][iMod], vals[i][iLoc], vals[i][iCat], tipos);
+    var cat = _categoriaDe(vals[i][iMod], vals[i][iLoc], vals[i][iCat], tipos,
+                           vals[i][CAB_CONTAGENS.indexOf('nome')], fracs[String(vals[i][0])]);
     if (cats.indexOf(cat) >= 0) { sai[String(vals[i][0])] = true; n++; }
   }
   [[ABA_CONTAGENS, CAB_CONTAGENS], [ABA_ITENS, CAB_ITENS], [ABA_FAB, CAB_FAB]]
@@ -583,18 +628,37 @@ function _ler(p) {
   if (p.action === 'getData') {
     var shC = _aba(ABA_CONTAGENS, CAB_CONTAGENS);
     var vals = shC.getDataRange().getValues();
-    var out = [], tipos = null;
+    var out = [], tipos = null, iCat = CAB_CONTAGENS.indexOf('categoria'), iMod = CAB_CONTAGENS.indexOf('modo');
+    var fracs = _fracsLivres(vals);
+    var deduzidas = [];
     for (var i = 1; i < vals.length; i++) {
       var o = {};
       CAB_CONTAGENS.forEach(function (col, k) { o[col] = vals[i][k] === undefined ? '' : vals[i][k]; });
       if (CATEGORIAS.indexOf(String(o.categoria)) < 0) {
         if (o.modo === 'locacao' && !tipos) tipos = _tiposDaBase();
-        o.categoria = _categoriaDe(o.modo, o.locacao, o.categoria, tipos);
+        o.categoria = _categoriaDe(o.modo, o.locacao, o.categoria, tipos, o.nome, fracs[String(o.id)]);
+        deduzidas.push([i + 1, o.categoria]);
       }
+      if (o.categoria === 'locacao' && !o.locacao && o.modo === 'livre') o.locacao = _enderecoDoNome(o.nome);
       // contagens de prateleira antigas gravaram divergência contra o saldo total
       if (o.categoria === 'prateleira') o.divergencias = 0;
       o.recebido_em = _iso(o.recebido_em);
       out.push(o);
+    }
+    // grava a categoria deduzida (as próximas leituras não refazem a conta).
+    // Só com o lock: um envio simultâneo pode deslocar as linhas.
+    if (deduzidas.length) {
+      var lk = LockService.getScriptLock();
+      if (lk.tryLock(5000)) {
+        try {
+          _garantirCab(shC, CAB_CONTAGENS);
+          var atual = shC.getDataRange().getValues();
+          deduzidas.forEach(function (d) {
+            var r = atual[d[0] - 1];
+            if (r && String(r[0]) === String(vals[d[0] - 1][0])) shC.getRange(d[0], iCat + 1).setValue(d[1]);
+          });
+        } finally { lk.releaseLock(); }
+      }
     }
     return _json({ok: true, contagens: out});
   }

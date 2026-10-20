@@ -404,17 +404,21 @@ var capItens={},capResult=null;
 function htmlCapacetes(){
   var gerais=contsDe('capacetes').filter(function(c){return c.categoria!=='prateleira'}).sort(porData);
   var prats=contsDe('capacetes').filter(function(c){return c.categoria==='prateleira'}).sort(porData);
-  var padrao={};gerais.forEach(function(c){var n=Number(c.num_contagem)||0;if(!padrao[n])padrao[n]=c.id});
-  var marc={};Object.keys(padrao).forEach(function(n){marc[padrao[n]]=1});
-  var rod=gerais.map(function(c){
-    return '<label><input type="checkbox" class="capRod" value="'+esc(c.id)+'" '+(marc[c.id]?'checked':'')+'> <b>'+esc(c.num_contagem)+'ª</b> '+esc(c.conferente||'—')+
-      ' <span class="sub" style="margin:0">'+fmtData(c.recebido_em)+' · '+fmtN(c.total_itens)+' itens</span> '+statusBadge(c)+'</label>';
-  }).join('');
+  // A equipe conta capacete todo dia, 2-3 pessoas (pelo modo Livre ou pelo 🪖):
+  // as rodadas são agrupadas por DIA, e o último dia vem marcado.
+  var dias=diasDe(gerais),rod='';
+  dias.forEach(function(d,ix){
+    rod+='<div class="linha entre" style="margin:8px 0 2px"><b style="font-size:13px">'+esc(d.rot)+'</b><span><button class="btn sec pq" onclick="marcarDia(\''+d.chave+'\',true)">marcar o dia</button> <button class="btn sec pq" onclick="marcarDia(\''+d.chave+'\',false)">desmarcar</button></span></div>';
+    d.conts.slice().reverse().forEach(function(c){
+      rod+='<label><input type="checkbox" class="capRod" data-dia="'+d.chave+'" value="'+esc(c.id)+'" '+(ix===0?'checked':'')+'> <b>'+esc(rotRodada(c))+'</b>'+
+        ' <span class="sub" style="margin:0">'+fmtData(c.recebido_em).slice(11)+' · '+fmtN(c.total_itens)+' códigos'+(c.modo==='livre'?' · modo livre':'')+'</span> '+statusBadge(c)+'</label>';
+    });
+  });
   return '<div class="kpis" id="capKpis"></div>'+
   '<div class="card"><h2>📐 Indicadores do inventário de capacetes</h2>'+
     '<p class="sub">Mesma conta do laudo do bot: em peças, sem valores. A ÚLTIMA rodada marcada é a referência física; rodada que cobre menos de 60% dos códigos da maior é parcial e fica fora.</p>'+
-    '<div class="rodadas">'+(rod||'<div class="vazio" style="padding:10px">Nenhuma rodada geral (🪖 Contagem de Capacetes) recebida ainda.</div>')+
-    '<label><input type="checkbox" id="capPrat"> 🗄️ Varredura das prateleiras <span class="sub" id="capPratInfo" style="margin:0">(soma da contagem mais recente de cada prateleira)</span></label></div>'+
+    '<div class="rodadas">'+(rod||'<div class="vazio" style="padding:10px">Nenhuma contagem de capacetes recebida ainda.</div>')+
+    '<label style="margin-top:6px"><input type="checkbox" id="capPrat"> 🗄️ Varredura das prateleiras <span class="sub" id="capPratInfo" style="margin:0">(soma da contagem mais recente de cada prateleira)</span></label></div>'+
     '<div class="linha" style="margin-top:10px"><label class="chk"><input type="checkbox" id="capCompleta" checked> contagem completa: capacete com saldo no sistema e não bipado em nenhuma rodada conta como FALTA</label></div>'+
     '<div class="linha"><button class="btn" onclick="calcularCapacetes()">Calcular indicadores</button></div>'+
     '<div id="capRes"></div></div>'+
@@ -425,9 +429,25 @@ function htmlCapacetes(){
     '<div id="pratArea" class="vazio">Carregando o mapa…</div></div>'+
   '<div class="card"><div class="linha entre"><h2>📋 Contagens recebidas</h2>'+
     ((gerais.length+prats.length)?'<button class="btn dg" onclick="encerrarCiclo(\'capacetes\')">💾 Encerrar ciclo de capacetes</button>':'')+'</div>'+
-    '<details open><summary><b>🪖 Gerais</b> ('+gerais.length+')</summary>'+tabelaContagens(gerais,{vazio:'Nenhuma contagem geral de capacetes.'})+'</details>'+
+    '<p class="sub">Contagens livres entram aqui sozinhas quando quase todos os códigos bipados são capacetes.</p><details open><summary><b>🪖 Gerais</b> ('+gerais.length+')</summary>'+tabelaContagens(gerais,{vazio:'Nenhuma contagem geral de capacetes.'})+'</details>'+
     '<details><summary><b>🗄️ Por prateleira</b> ('+prats.length+')</summary>'+tabelaContagens(prats,{semDiv:true,vazio:'Nenhuma contagem por prateleira neste ciclo.'})+'</details></div>'+
   '<div class="card" id="cardDetalhe" style="display:none"></div>';
+}
+function diaDe(c){var d=new Date(c.recebido_em);return isNaN(d)?'?':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function diasDe(lista){
+  var por={};lista.forEach(function(c){var k=diaDe(c);(por[k]=por[k]||[]).push(c)});
+  return Object.keys(por).sort().reverse().map(function(k){
+    var p=k.split('-'),dt=new Date(+p[0],+p[1]-1,+p[2]);
+    return {chave:k,rot:dt.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+por[k].length+' contage'+(por[k].length>1?'ns':'m'),conts:por[k].sort(function(a,b){return new Date(a.recebido_em)-new Date(b.recebido_em)})};
+  });
+}
+function rotRodada(c){return (c.num_contagem?c.num_contagem+'ª ':'')+(c.conferente||c.nome||'?')}
+function marcarDia(k,v){document.querySelectorAll('.capRod').forEach(function(x){if(x.dataset.dia===k)x.checked=v})}
+var baseCap=null;
+function carregarBaseCap(cb){
+  if(baseCap){cb();return}
+  api({action:'getBase',tipo:'capacetes'}).then(function(j){baseCap={};((j.ok&&j.pecas)||[]).forEach(function(p){baseCap[String(p.codigo).toUpperCase()]={saldo:Number(p.saldo)||0,desc:p.desc||''}});cb()})
+  .catch(function(){baseCap={};cb()});
 }
 function iniciarCapacetes(){
   renderCapKpis();
@@ -438,7 +458,8 @@ function renderCapKpis(){
   var locs=mapa?mapa.locais.length:null,un=0,mod={};
   if(mapa)mapa.locais.forEach(function(l){l.itens.forEach(function(i){un+=i.qtd;mod[i.codigo]=1})});
   var el=document.getElementById('capKpis');if(!el)return;
-  el.innerHTML='<div class="kpi"><b>'+gerais.length+'</b><span>rodadas gerais</span></div>'+
+  var dias=diasDe(gerais);
+  el.innerHTML='<div class="kpi"><b>'+gerais.length+'</b><span>contagens de capacetes</span><small>'+(dias.length?dias.length+' dias · último com '+dias[0].conts.length:'')+'</small></div>'+
     '<div class="kpi"><b>'+(locs===null?'…':locs+'/19')+'</b><span>prateleiras no mapa</span></div>'+
     '<div class="kpi"><b>'+(mapa?fmtN(un):'…')+'</b><span>capacetes nas prateleiras</span><small>'+(mapa?fmtN(Object.keys(mod).length)+' modelos':'')+'</small></div>'+
     '<div class="kpi"><b>'+(capResult&&capResult.m?pct(capResult.m.ac_codigo):'—')+'</b><span>acurácia por código</span><small>meta 95%</small></div>';
@@ -511,7 +532,7 @@ function calcularCapacetes(){
   if(!ids.length&&!comPrat){res.innerHTML='<div class="nota av">Marque ao menos uma rodada.</div>';return}
   res.innerHTML='<div class="vazio">Calculando…</div>';
   var conts=ids.map(function(id){return contagens.filter(function(c){return String(c.id)===id})[0]}).filter(Boolean);
-  carregarEstoque(function(){carregarMapa(function(){
+  carregarEstoque(function(){carregarMapa(function(){carregarBaseCap(function(){
     var precisa=conts.filter(function(c){return !capItens[c.id]}).map(function(c){return c.id});
     var go=function(){
       var rodadas=[],salBase={},descs={},universo={};
@@ -522,7 +543,7 @@ function calcularCapacetes(){
           if(!vazioCont(i.saldo)&&salBase[k]===undefined)salBase[k]=Number(i.saldo)||0;
           if(!vazioCont(i.contado))ct[k]=(ct[k]||0)+(Number(i.contado)||0);
         });
-        rodadas.push({rot:(c.num_contagem||'?')+'ª '+(c.conferente||''),t:new Date(c.recebido_em).getTime()||0,ct:ct});
+        rodadas.push({rot:rotRodada(c)+' '+fmtData(c.recebido_em).slice(11),t:new Date(c.recebido_em).getTime()||0,ct:ct});
       });
       if(comPrat&&mapa.locais.length){
         var ct={},t=0;mapa.locais.forEach(function(l){t=Math.max(t,new Date(l.recebido_em).getTime()||0);l.itens.forEach(function(i){var k=String(i.codigo).toUpperCase();ct[k]=(ct[k]||0)+i.qtd;descs[k]=descs[k]||i.descricao})});
@@ -536,7 +557,7 @@ function calcularCapacetes(){
       // saldo do sistema: contábil ao vivo (base do dia) > saldo da base usada na contagem
       var sal={},fonteVivo=0,fonteBase=0,todos={};
       validas.forEach(function(r){Object.keys(r.ct).forEach(function(k){todos[k]=1})});
-      if(completa)Object.keys(universo).forEach(function(k){todos[k]=1});
+      if(completa)Object.keys(baseCap).forEach(function(k){todos[k]=1;universo[k]=1;descs[k]=descs[k]||baseCap[k].desc;if(salBase[k]===undefined)salBase[k]=baseCap[k].saldo});
       Object.keys(todos).forEach(function(k){
         var e=estoqueMap[k];
         if(e&&e.contabil!==undefined&&e.contabil!==''){sal[k]={cont:Number(e.contabil)||0,desc:e.desc||descs[k]};fonteVivo++}
@@ -556,7 +577,7 @@ function calcularCapacetes(){
     if(!precisa.length){go();return}
     api({action:'getItensLote',ids:precisa.join(',')}).then(function(j){precisa.forEach(function(id){capItens[id]=(j.ok&&j.itens&&j.itens[id])||[]});go()})
     .catch(function(){res.innerHTML='<div class="nota av">Falha ao carregar os itens.</div>'});
-  })});
+  })})});
 }
 function renderCapacetesRes(){
   var r=capResult,el=document.getElementById('capRes');if(!el)return;
@@ -837,13 +858,14 @@ function uploadBase(tipo){
 // Changelog curado (dashboard + coletoras). Mais novo primeiro.
 var CHANGELOG=[
   {data:'20/10/26',area:'Dashboard',ver:'Abas por categoria',itens:[
+    'As contagens de capacete feitas pela Contagem Livre (Cap-Luiz, 1° Cap - Victor...) entram sozinhas na aba Capacetes, agrupadas por dia. As livres com nome de endereço (03A12C-joao) vão para Locação.',
     'As contagens não ficam mais misturadas: uma aba por categoria (🪖 Capacetes, 📊 Diária, 📍 Locação, 🏷️ Tipo, 👕 Roupas, ✋ Livre). A coletora passou a dizer de que modo é cada contagem.',
     'Aba Capacetes: indicadores do inventário iguais aos do laudo do bot (acurácia por código, por peça, líquida e confiança, em peças), mapa das prateleiras e a lista de contagens gerais e por prateleira.',
     'Pares 1ª × 2ª montados sozinhos por local, com botão Cruzar. O cruzamento avisa quando as contagens são de locais diferentes.',
     'Contagem por prateleira não mostra mais divergência falsa (o saldo do sistema é o total da loja, não o da prateleira).',
     '💾 Encerrar ciclo agora é por categoria e NÃO apaga o mapa das prateleiras (a página das vendas continua funcionando). Limpar tudo ficou em 🗄️ Arquivo.',
     'Estoque parado, Bases e Versões foram para o fim das abas.']},
-  {data:'20/10/26',area:'Backend',ver:'@13',itens:[
+  {data:'20/10/26',area:'Backend',ver:'@13–@14',itens:[
     'Categoria gravada em cada contagem (as antigas são reconhecidas pelo local).',
     'Segurança: o token das coletoras só envia contagem e lê base e mapa. Trocar/apagar base e ler o estoque com custo exige a senha.',
     'A senha do dashboard não vai mais na URL (leitura por POST).']},
