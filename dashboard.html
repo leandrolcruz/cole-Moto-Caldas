@@ -11,29 +11,48 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);padding:18px;max-width:1100px;margin:0 auto}
   h1{font-size:20px;margin-bottom:2px}h1 span{color:var(--ac)}
-  .sub{color:var(--tx3);font-size:12px;margin-bottom:16px}
+  h2{font-size:15px;margin-bottom:4px}
+  .sub{color:var(--tx3);font-size:12px;margin-bottom:12px}
   .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+  .rolar{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--bd)}
-  td{padding:7px 8px;border-bottom:1px solid rgba(42,46,66,.5)}
+  th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+  td{padding:7px 8px;border-bottom:1px solid rgba(42,46,66,.5);vertical-align:top}
+  td.mono{font-family:ui-monospace,monospace;white-space:nowrap}
   tr.clicavel{cursor:pointer}tr.clicavel:hover{background:rgba(72,149,239,.08)}
-  .btn{background:var(--bl);color:#fff;border:0;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600}
-  .btn.sec{background:var(--bd)}.btn.gn{background:var(--gn)}
-  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+  tr.sel{background:rgba(72,149,239,.12)}
+  .btn{background:var(--bl);color:#fff;border:0;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .btn.sec{background:var(--bd)}.btn.gn{background:var(--gn)}.btn.dg{background:var(--dg)}
+  .btn.pq{padding:3px 9px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}
   .b-gn{background:rgba(45,198,83,.15);color:var(--gn)}.b-dg{background:rgba(230,57,70,.15);color:var(--dg)}
   .b-bl{background:rgba(72,149,239,.15);color:var(--bl)}.b-or{background:rgba(247,127,0,.15);color:var(--or)}
+  .b-cz{background:rgba(160,166,189,.12);color:var(--tx2)}
   .dif-mais{color:var(--bl);font-weight:700}.dif-menos{color:var(--dg);font-weight:700}.dif-ok{color:var(--gn)}
   input,select{background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:7px;padding:8px 10px;font-size:14px}
+  input[type=checkbox]{padding:0;width:16px;height:16px;vertical-align:middle;accent-color:var(--bl)}
+  label.chk{font-size:13px;color:var(--tx2);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
   .linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-  .tabs{display:flex;gap:6px;margin-bottom:14px}
-  .tab{padding:8px 16px;border-radius:8px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx2)}
-  .tab.ativa{background:var(--bl);color:#fff;border-color:var(--bl)}
-  .vazio{color:var(--tx3);text-align:center;padding:30px;font-size:14px}
+  .entre{justify-content:space-between}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .tab{padding:8px 14px;border-radius:8px;background:var(--card);border:1px solid var(--bd);cursor:pointer;font-size:13px;font-weight:600;color:var(--tx2);white-space:nowrap;flex:0 0 auto}
+  .tab .n{display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:var(--bd);font-size:11px;color:var(--tx)}
+  .tab.ativa{background:var(--bl);color:#fff;border-color:var(--bl)}.tab.ativa .n{background:rgba(255,255,255,.25)}
+  .tab.adm{font-weight:500;font-size:12px;padding:8px 11px}
+  .tabs .sep{flex:1 0 12px}
+  .vazio{color:var(--tx3);text-align:center;padding:24px;font-size:14px}
   #telaSenha{max-width:360px;margin:80px auto;text-align:center}
-  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-  .kpi{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 16px;flex:1;min-width:120px;text-align:center}
-  .kpi b{display:block;font-size:22px}.kpi span{font-size:11px;color:var(--tx3)}
-  @media(max-width:700px){td,th{padding:5px 4px;font-size:12px}}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:center}
+  .kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.kpi span{font-size:11px;color:var(--tx3)}
+  .kpi small{display:block;font-size:10px;color:var(--tx3);margin-top:2px}
+  .nota{font-size:12px;color:var(--tx2);background:rgba(72,149,239,.07);border-left:3px solid var(--bl);padding:8px 10px;border-radius:6px;margin:8px 0}
+  .nota.av{background:rgba(247,127,0,.08);border-color:var(--or)}
+  .rodadas label{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(42,46,66,.4);font-size:13px;cursor:pointer}
+  details>summary{cursor:pointer;padding:6px 0;font-size:13px}
+  #msg{display:none;margin-bottom:10px}
+  @media(max-width:700px){body{padding:12px}td,th{padding:5px 5px;font-size:12px}.kpi b{font-size:19px}}
 </style>
 </head>
 <body>
@@ -50,343 +69,201 @@
 </div>
 
 <div id="telaMain" style="display:none">
-  <div class="linha" style="justify-content:space-between">
+  <div class="linha entre">
     <div><h1>📦 Inventário <span>Moto Caldas</span></h1>
-      <p class="sub">Contagens recebidas das coletoras</p></div>
-    <div><button class="btn sec" onclick="carregar()">↻ Recarregar</button>
-      <button class="btn" style="background:var(--dg);border-color:var(--dg)" onclick="salvarELimpar()">💾 Salvar e limpar</button>
+      <p class="sub" id="subtit" style="margin-bottom:0">Contagens recebidas das coletoras, por categoria</p></div>
+    <div class="linha" style="margin:0"><button class="btn sec" onclick="carregar()">↻ Recarregar</button>
       <button class="btn sec" onclick="sair()">Sair</button></div>
   </div>
-  <p class="sub" id="arqSt" style="display:none;margin-bottom:10px"></p>
-  <div class="kpis" id="kpis"></div>
-  <div class="tabs">
-    <div class="tab ativa" id="tabL" onclick="mudarTab('L')">Contagens</div>
-    <div class="tab" id="tabC" onclick="mudarTab('C')">🔎 Análises</div>
-    <div class="tab" id="tabP" onclick="mudarTab('P')">🗄️ Prateleiras</div>
-    <div class="tab" id="tabB" onclick="mudarTab('B')">📥 Bases</div>
-    <div class="tab" id="tabV" onclick="mudarTab('V')">🆕 Versões</div>
-  </div>
-  <div id="paneL"><div class="card"><div id="listaContagens" class="vazio">Carregando…</div></div>
-    <div class="card" id="cardDetalhe" style="display:none">
-      <div class="linha" style="justify-content:space-between">
-        <b id="detTitulo"></b>
-        <div><label style="font-size:12px;color:var(--tx2)"><input type="checkbox" id="soDiv" onchange="renderItens()"> só divergências</label>
-          <button class="btn gn" onclick="exportarXlsx()">⬇ Excel</button></div>
-      </div>
-      <div style="overflow-x:auto"><div id="detItens"></div></div>
-    </div></div>
-  <div id="paneC" style="display:none">
-    <div class="card">
-      <div class="linha" style="justify-content:space-between">
-        <div class="linha" style="margin:0">
-          <label style="font-size:13px;color:var(--tx2)">Contagens:</label>
-          <button class="btn sec" onclick="anaMarcarTodas(true)">✓ marcar todas</button>
-          <button class="btn sec" onclick="anaMarcarTodas(false)">✗ desmarcar</button>
-          <button class="btn" onclick="rodarAnalise()">Analisar</button>
-          <label style="font-size:12px;color:var(--tx2)"><input type="checkbox" id="anaSoDiv" checked onchange="renderAnalise()"> só divergentes</label>
-        </div>
-        <button class="btn gn" onclick="exportarAnalise()">⬇ Excel</button>
-      </div>
-      <div id="anaContList" style="max-height:180px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:13px"></div>
-      <div class="linha" id="anaReconta" style="display:none;margin-top:8px;align-items:center">
-        <button class="btn" onclick="gerarBaseRecontagem()">📥 Gerar base de recontagem (só divergentes)</button>
-        <label style="font-size:12px;color:var(--tx2)">como base de:</label>
-        <select id="anaRecTipo"><option value="capacetes">🪖 Capacetes</option><option value="locacao">📍 Locação</option><option value="tipo">🏷️ Tipo</option><option value="diaria">📊 Diária</option></select>
-        <span class="sub" id="anaRecSt" style="display:inline"></span>
-      </div>
-      <p class="sub" id="anaInfo" style="margin-top:8px"></p>
-      <div class="kpis" id="anaKpis"></div>
-      <div style="overflow-x:auto"><div id="anaArea" class="vazio">Escolha uma contagem e clique em Analisar. A análise cruza o contado com o estoque (contábil, reserva, O.S.) — faça antes de qualquer ajuste.</div></div>
-    </div>
-    <div class="card">
-      <div class="linha" style="justify-content:space-between">
-        <b>💰 Garimpo — peças paradas (capital travado)</b>
-        <div class="linha" style="margin:0"><label style="font-size:12px;color:var(--tx2)">sem venda há</label>
-          <select id="anaMeses" onchange="renderGarimpo()"><option value="6">6 meses</option><option value="12" selected>12 meses</option><option value="24">24 meses</option></select>
-          <button class="btn gn" onclick="exportarGarimpo()">⬇ Excel</button></div>
-      </div>
-      <p class="sub" id="garimpoInfo"></p>
-      <div style="overflow-x:auto"><div id="garimpoArea" class="vazio">Abra a aba para carregar o estoque…</div></div>
-    </div>
-  </div>
-  <div id="paneP" style="display:none">
-    <div class="card">
-      <div class="linha" style="justify-content:space-between">
-        <b>🗄️ Mapa das prateleiras</b>
-        <button class="btn gn" onclick="exportarPrateleiras()">⬇ Excel</button>
-      </div>
-      <p class="sub" style="margin-top:6px">O que foi bipado em cada prateleira (1–18) e na Exposição, pela contagem mais recente de cada uma. Use a coletora "🗄️ Capacetes por Prateleira".</p>
-      <div class="kpis" id="pratKpis"></div>
-      <div style="overflow-x:auto"><div id="pratArea" class="vazio">Carregando prateleiras…</div></div>
-    </div>
-    <div class="card">
-      <b>🔁 Capacetes em mais de uma prateleira</b>
-      <p class="sub" style="margin:4px 0 6px">Mesmos códigos aparecendo em prateleiras diferentes — candidatos a juntar.</p>
-      <div style="overflow-x:auto"><div id="pratDup" class="vazio">—</div></div>
-    </div>
-  </div>
-  <div id="paneB" style="display:none">
-    <div class="card">
-      <p class="sub" style="margin-bottom:8px">Suba aqui a planilha do Microwork — as coletoras baixam a base sozinhas (não se importa mais planilha no aparelho).</p>
-      <div class="linha"><label style="font-size:13px;color:var(--tx2)">Quem está enviando:</label><input id="inpPor" placeholder="seu nome" style="width:180px"></div>
-    </div>
-    <div class="card">
-      <b>📊 Base da Contagem Diária</b> <span class="sub" style="display:inline">(Saída de Mercadoria)</span>
-      <p class="sub" id="meta-diaria" style="margin:6px 0">…</p>
-      <div class="linha"><input type="file" id="file-diaria" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('diaria')">Enviar base</button></div>
-      <p class="sub" id="st-diaria"></p>
-      <div id="hist-diaria"></div>
-    </div>
-    <div class="card">
-      <b>📍 Base da Contagem por Locação</b> <span class="sub" style="display:inline">(Planilha de Localização)</span>
-      <p class="sub" id="meta-locacao" style="margin:6px 0">…</p>
-      <div class="linha"><input type="file" id="file-locacao" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('locacao')">Enviar base</button></div>
-      <p class="sub" id="st-locacao"></p>
-      <div id="hist-locacao"></div>
-    </div>
-    <div class="card">
-      <b>🏷️ Base da Contagem por Tipo</b> <span class="sub" style="display:inline">(Listagem de Mercadoria com a coluna Tipo Mercadoria)</span>
-      <p class="sub" id="meta-tipo" style="margin:6px 0">…</p>
-      <div class="linha"><input type="file" id="file-tipo" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('tipo')">Enviar base</button></div>
-      <p class="sub" id="st-tipo"></p>
-      <div id="hist-tipo"></div>
-    </div>
-    <div class="card">
-      <b>🪖 Base da Contagem de Capacetes</b> <span class="sub" style="display:inline">(Listagem de Mercadoria — filtra capacetes dos tipos CAPACETES+BOUTIQUE, inclui saldo zero)</span>
-      <p class="sub" id="meta-capacetes" style="margin:6px 0">…</p>
-      <div class="linha"><input type="file" id="file-capacetes" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase('capacetes')">Enviar base</button></div>
-      <p class="sub" id="st-capacetes"></p>
-      <div id="hist-capacetes"></div>
-    </div>
-  </div>
-  <div id="paneV" style="display:none"><div class="card">
-    <p class="sub">O que mudou em cada atualização — dashboard e coletoras (apps das leitoras). A versão do app aparece na tela inicial da coletora.</p>
-    <div id="versoesArea"></div>
-  </div></div>
+  <p class="nota" id="msg"></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="conteudo"></div>
 </div>
 
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
-var SK='inv_dash_senha';
-var contagens=[],itensAtual=[],fabAtual=[],contAtual=null;
+var SK='inv_dash_senha',TABK='inv_dash_aba';
+var contagens=[],mapa=null,estoqueDB=null,estoqueMap={},estoqueMeta=null;
+// Categorias: a contagem por prateleira é parte do inventário de capacetes.
+var CATS=[
+  {id:'capacetes',rot:'Capacetes',ic:'🪖',inclui:['capacetes','prateleira'],base:'capacetes'},
+  {id:'diaria',rot:'Diária',ic:'📊',inclui:['diaria'],base:'diaria'},
+  {id:'locacao',rot:'Locação',ic:'📍',inclui:['locacao'],base:'locacao'},
+  {id:'tipo',rot:'Tipo',ic:'🏷️',inclui:['tipo'],base:'tipo'},
+  {id:'roupa',rot:'Roupas',ic:'👕',inclui:['roupa'],base:null},
+  {id:'livre',rot:'Livre',ic:'✋',inclui:['livre'],base:null}];
+var ADMIN=[{id:'parado',rot:'Estoque parado',ic:'💰'},{id:'bases',rot:'Bases',ic:'📥'},
+           {id:'versoes',rot:'Versões',ic:'🆕'},{id:'arquivo',rot:'Arquivo',ic:'🗄️'}];
+var abaAtual=(function(){try{return localStorage.getItem(TABK)||'capacetes'}catch(e){return 'capacetes'}})();
 
-function senha(){return localStorage.getItem(SK)||''}
-function entrar(){
-  var s=document.getElementById('inpSenha').value.trim();
-  if(!s)return;
-  localStorage.setItem(SK,s);
-  testar();
+function esc(v){return String(v===null||v===undefined?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function senha(){try{return localStorage.getItem(SK)||''}catch(e){return ''}}
+function entrar(){var s=document.getElementById('inpSenha').value.trim();if(!s)return;try{localStorage.setItem(SK,s)}catch(e){}testar(s)}
+function sair(){try{localStorage.removeItem(SK)}catch(e){}location.reload()}
+// Leituras vão por POST: a senha no corpo, nunca na URL (histórico/logs).
+// Aceita "action=x&k=v" (forma antiga) ou objeto.
+function api(params,senhaUsar){
+  var body={};
+  if(typeof params==='string')new URLSearchParams(params).forEach(function(v,k){body[k]=v});else body=Object.assign({},params);
+  body.senha=senhaUsar||senha();
+  return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)}).then(function(r){return r.json()});
 }
-function sair(){localStorage.removeItem(SK);location.reload()}
-function api(params){
-  var u=API_URL+(API_URL.indexOf('?')>-1?'&':'?')+'senha='+encodeURIComponent(senha())+'&'+params;
-  return fetch(u).then(function(r){return r.json()});
-}
-function testar(){
-  if(!API_URL){document.getElementById('senhaErro').textContent='Backend ainda não configurado (API_URL vazio).';return}
-  api('action=getData').then(function(j){
-    if(!j.ok){document.getElementById('senhaErro').textContent='Senha inválida.';localStorage.removeItem(SK);return}
+function postAdmin(body){return api(body)}
+function aviso(html,tipo){var m=document.getElementById('msg');if(!html){m.style.display='none';return}m.className='nota'+(tipo==='av'?' av':'');m.innerHTML=html;m.style.display='block'}
+function testar(s){
+  api({action:'getData'},s).then(function(j){
+    if(!j.ok){document.getElementById('senhaErro').textContent='Senha inválida.';try{localStorage.removeItem(SK)}catch(e){}return}
     document.getElementById('telaSenha').style.display='none';
     document.getElementById('telaMain').style.display='block';
-    contagens=j.contagens||[];renderLista();
+    contagens=j.contagens||[];renderTudo();
   }).catch(function(){document.getElementById('senhaErro').textContent='Falha ao falar com o backend.'});
 }
-function carregar(){api('action=getData').then(function(j){if(j.ok){contagens=j.contagens||[];renderLista()}})}
-function salvarELimpar(){
-  if(!confirm('💾 SALVAR E LIMPAR\n\nIsso vai:\n1. Salvar uma cópia COMPLETA da planilha na pasta do Drive (com data e hora);\n2. Zerar TODAS as contagens recebidas (itens e auditoria juntos).\n\nAs bases (capacetes, locação...) e o estoque do dia FICAM.\n\nContinuar?'))return;
-  if(!confirm('Última confirmação: as contagens serão APAGADAS do sistema (a cópia fica no Drive).\n\nSalvar e limpar agora?'))return;
-  var st=document.getElementById('arqSt');
-  st.style.display='block';st.innerHTML='⏳ Salvando cópia no Drive e limpando…';
-  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({action:'arquivar_limpar',senha:senha()})})
-  .then(function(r){return r.json()}).then(function(j){
-    if(j.ok){st.innerHTML='✅ Arquivado no Drive: <a href="'+j.url+'" target="_blank" style="color:var(--bl)">'+j.nome+'</a> — contagens zeradas.';carregar()}
-    else st.innerHTML='❌ Falha: '+(j.erro||'?')+' — nada foi apagado.';
-  }).catch(function(){st.innerHTML='❌ Falha ao falar com o backend — nada foi apagado. Tente de novo.'});
+function carregar(){
+  aviso('⏳ Recarregando…');
+  mapa=null;
+  api({action:'getData'}).then(function(j){aviso('');if(j.ok){contagens=j.contagens||[];renderTudo()}else aviso('❌ '+esc(j.erro||'falha'),'av')})
+  .catch(function(){aviso('❌ Falha ao falar com o backend.','av')});
 }
-function mudarTab(t){
-  ['L','C','P','B','V'].forEach(function(x){
-    document.getElementById('tab'+x).classList.toggle('ativa',x===t);
-    document.getElementById('pane'+x).style.display=x===t?'block':'none';
-  });
-  if(t==='C')initAnalise();
-  if(t==='P')renderPrateleirasDash();
-  if(t==='B'){document.getElementById('inpPor').value=localStorage.getItem('inv_dash_por')||'';renderBases()}
-  if(t==='V')renderVersoes();
-}
-// ===== PRATELEIRAS (mapa do que foi bipado em cada uma) =====
-var PRATELEIRAS_DASH=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
-var pratMapa={};
-function renderPrateleirasDash(){
-  var recente={};
-  contagens.forEach(function(c){
-    if(c.modo!=='locacao'||PRATELEIRAS_DASH.indexOf(c.locacao)<0)return;
-    var prev=recente[c.locacao];
-    if(!prev||new Date(c.recebido_em)>new Date(prev.recebido_em))recente[c.locacao]=c;
-  });
-  var locs=PRATELEIRAS_DASH.filter(function(l){return recente[l]});
-  var area=document.getElementById('pratArea');
-  if(!locs.length){area.className='vazio';area.textContent='Nenhuma contagem por prateleira recebida ainda. Use o modo "🗄️ Capacetes por Prateleira" no app e ☁️ Enviar.';document.getElementById('pratKpis').innerHTML='';document.getElementById('pratDup').className='vazio';document.getElementById('pratDup').textContent='—';pratMapa={};return}
-  area.className='';area.innerHTML='<div class="vazio">Carregando itens das prateleiras…</div>';
-  Promise.all(locs.map(function(l){
-    return api('action=getItens&id='+encodeURIComponent(recente[l].id)).then(function(j){return {loc:l,itens:(j.ok&&j.itens)||[],cont:recente[l]}}).catch(function(){return {loc:l,itens:[],cont:recente[l]}});
-  })).then(function(res){
-    pratMapa={};var totalUnid=0,totalCodigos=0,h='';
-    res.forEach(function(r){
-      var linhas=r.itens.filter(function(i){return i.contado!==''&&i.contado!==null&&Number(i.contado)>0});
-      pratMapa[r.loc]=linhas.map(function(i){return {codigo:i.codigo,descricao:i.descricao||'',qtd:Number(i.contado)||0}});
-      var unid=0;linhas.forEach(function(i){unid+=Number(i.contado)||0});
-      totalUnid+=unid;totalCodigos+=linhas.length;
-      h+='<div style="margin-bottom:14px"><b>'+(r.loc==='Exposição'?'🛍️ ':'🗄️ ')+r.loc+'</b> <span class="sub">'+linhas.length+' códigos • '+unid+' un • '+(r.cont.conferente||'')+' • '+fmtData(r.cont.recebido_em)+'</span>';
-      if(!linhas.length){h+='<p class="sub">— nada contado —</p></div>';return}
-      h+='<table><tr><th>Código</th><th>Descrição</th><th>Qtd</th></tr>';
-      pratMapa[r.loc].forEach(function(i){h+='<tr><td style="font-family:monospace">'+i.codigo+'</td><td>'+(i.descricao||'')+'</td><td><b>'+i.qtd+'</b></td></tr>'});
-      h+='</table></div>';
-    });
-    area.innerHTML=h;
-    document.getElementById('pratKpis').innerHTML=
-      '<div class="kpi"><b>'+locs.length+'</b><span>locais contados</span></div>'+
-      '<div class="kpi"><b>'+totalCodigos+'</b><span>códigos</span></div>'+
-      '<div class="kpi"><b>'+totalUnid+'</b><span>capacetes</span></div>';
-    var porCod={};
-    Object.keys(pratMapa).forEach(function(loc){pratMapa[loc].forEach(function(i){if(!porCod[i.codigo])porCod[i.codigo]={desc:i.descricao,locs:[]};porCod[i.codigo].locs.push({loc:loc,qtd:i.qtd})})});
-    var dup=Object.keys(porCod).filter(function(cod){return porCod[cod].locs.length>1});
-    var dEl=document.getElementById('pratDup');
-    if(!dup.length){dEl.className='vazio';dEl.textContent='Nenhum — cada capacete está numa só prateleira. 🎉';}
-    else{
-      var dh='<table><tr><th>Código</th><th>Descrição</th><th>Prateleiras</th></tr>';
-      dup.forEach(function(cod){dh+='<tr><td style="font-family:monospace">'+cod+'</td><td>'+(porCod[cod].desc||'')+'</td><td>'+porCod[cod].locs.map(function(x){return x.loc+' ('+x.qtd+')'}).join(', ')+'</td></tr>'});
-      dEl.className='';dEl.innerHTML=dh+'</table>';
-    }
-  });
-}
-function exportarPrateleiras(){
-  var linhas=[];
-  PRATELEIRAS_DASH.forEach(function(loc){(pratMapa[loc]||[]).forEach(function(i){linhas.push({'Prateleira':loc,'Código':i.codigo,'Descrição':i.descricao,'Qtd':i.qtd})})});
-  if(!linhas.length){alert('Nada para exportar — abra a aba e conte alguma prateleira primeiro.');return}
-  var ws=XLSX.utils.json_to_sheet(linhas);ws['!cols']=[{wch:14},{wch:16},{wch:36},{wch:8}];
-  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Prateleiras');
-  XLSX.writeFile(wb,'Prateleiras-capacetes-'+new Date().toISOString().substring(0,10)+'.xlsx');
-}
-// Changelog curado (dashboard + coletoras). Mais novo primeiro.
-var CHANGELOG=[
-  {data:'22/09/26',area:'Vendas',ver:'Netum v29 / backend @12',itens:[
-    'Nova página "Onde está o capacete?" (leandrolcruz.github.io/cole-Moto-Caldas/prateleiras.html) pro pessoal de vendas: busca por nome ou código e mostra a prateleira; grade das 18 prateleiras + Exposição com o que tem em cada uma. Atualiza sozinha a cada 5 min (contagem mais recente de cada prateleira).']},
-  {data:'22/09/26',area:'Backend',ver:'@11',itens:[
-    'Hora de recebimento das contagens e das bases estava 7h atrasada (planilha no fuso de Los Angeles). Datas agora gravadas como texto ISO, sem passar pelo fuso, e as antigas corrigidas.']},
-  {data:'17/09/26',area:'Coletoras',ver:'Netum v28 / Eyoyo v36',itens:[
-    'Item bipado fica PISCANDO na lista (com barra azul na lateral) até o próximo bipe — não se perde mais qual foi o último contado. Vale pra Livre, Diária, Locação, Tipo, Capacetes e Prateleiras.']},
-  {data:'17/09/26',area:'Coletoras',ver:'Netum v27 / Eyoyo v35',itens:[
-    'Capacetes por Prateleira: botão "☁️ Enviar todas" na lista de prateleiras — manda a contagem mais recente de cada prateleira de uma vez, com resumo no final. O botão mostra quantas já foram contadas e quantas faltam enviar.']},
-  {data:'17/09/26',area:'Coletoras',ver:'Netum v26 / Eyoyo v34',itens:[
-    'Capacetes por Prateleira: agora são 18 prateleiras (+ Exposição) — eram 13. Aba 🗄️ do dashboard acompanha.']},
-  {data:'09/09/26',area:'Dashboard',ver:'Salvar e limpar',itens:[
-    'Botão 💾 Salvar e limpar (no topo): salva uma cópia completa da planilha na pasta do Drive (com data/hora) e zera as contagens — bases e estoque ficam. Fecha o ciclo do inventário.']},
-  {data:'09/09/26',area:'Dashboard',ver:'Análises: cruzamento de contagens',itens:[
-    'Marque 2+ contagens (checkbox, com "marcar todas") e a análise CRUZA uma com a outra: valores iguais = ✓ confere (aí sim compara com o estoque); valores diferentes = ⚠ recontar.',
-    'Botão "📥 Gerar base de recontagem": sobe só os códigos divergentes como nova versão de base — na coletora, 📚 Escolher base → versão "recontagem" e bipa só eles.',
-    'Com 1 contagem marcada, funciona como antes (contado × estoque).']},
-  {data:'09/09/26',area:'Coletoras',ver:'Netum v23 / Eyoyo v32',itens:[
-    'Novo modo "🗄️ Capacetes por Prateleira": escolha a prateleira (1–13) ou a Exposição e bipe o que está nela — sem a trava de agrupamento (2 iguais na mesma prateleira é normal).',
-    'Usa a mesma base dos capacetes; código fora dela cai em auditoria (fabricante), como nos outros modos.']},
-  {data:'09/09/26',area:'Dashboard',ver:'Prateleiras',itens:[
-    'Nova aba "🗄️ Prateleiras": mapa do que foi bipado em cada prateleira/Exposição (contagem mais recente) + lista de capacetes que aparecem em mais de uma. Export em Excel.']},
-  {data:'04/09/26',area:'Dashboard',ver:'Análises',itens:[
-    'Nova aba "Análises": cruza o contado com o estoque real (contábil, disponível, reserva, O.S., requisição) — faça antes de qualquer ajuste.',
-    'Mostra divergentes com obsoleto, última venda, custo, preço de venda e alerta de "comprometido" (reserva/O.S.) pra não ajustar errado.',
-    'Garimpo de peças paradas: capital travado por tempo sem venda (6/12/24 meses), pra priorizar o que vender. Export em Excel.',
-    'Base do dia enriquecida (rotina 3112 + Listagem) atualizada automaticamente.']},
-  {data:'04/09/26',area:'Coletoras',ver:'Netum v22 / Eyoyo v31',itens:[
-    'Histórico de bases: o contador ESCOLHE qual base contar ao abrir o modo (📚 Escolher base) — não força mais a mais nova.']},
-  {data:'04/09/26',area:'Dashboard',ver:'Bases',itens:[
-    'Histórico de versões de cada base (data, quem subiu, nº de peças) com botão de apagar.']},
-  {data:'04/09/26',area:'Coletoras',ver:'Netum v21 / Eyoyo v30',itens:[
-    'Código do fabricante: bipe fora da base carregada NÃO conta — fica guardado só pra auditoria, com aviso na hora.',
-    'Correção: a base nova do dashboard chega sozinha na coletora (antes a base velha ficava presa).']},
-  {data:'04/09/26',area:'Dashboard',ver:'Fabricante',itens:[
-    'Coluna "Fab" na lista de contagens + bloco de códigos do fabricante no detalhe + aba no Excel.']},
-  {data:'04/09/26',area:'Base',ver:'Capacetes',itens:[
-    'Base de capacetes refeita com TODOS os capacetes (com e sem estoque), descrições completas — 1.115 itens.']},
-];
-function renderVersoes(){
-  var h='';
-  CHANGELOG.forEach(function(v){
-    var cor=v.area==='Coletoras'?'b-or':v.area==='Base'?'b-gn':'b-bl';
-    h+='<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
-       '<div class="linha" style="margin-bottom:4px"><span class="badge '+cor+'">'+v.area+'</span>'+
-       '<b>'+v.ver+'</b><span class="sub" style="margin-left:auto">'+v.data+'</span></div>'+
-       '<ul style="margin:0 0 0 18px;font-size:13px;color:var(--tx2)">'+
-       v.itens.map(function(i){return '<li style="margin:2px 0">'+i+'</li>'}).join('')+'</ul></div>';
-  });
-  document.getElementById('versoesArea').innerHTML=h;
-}
+function catDe(c){var k=String(c.categoria||c.modo||'livre');for(var i=0;i<CATS.length;i++)if(CATS[i].inclui.indexOf(k)>=0)return CATS[i].id;return 'livre'}
+function contsDe(catId){return contagens.filter(function(c){return catDe(c)===catId})}
+function porData(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)}
+function acharCat(id){return CATS.filter(function(c){return c.id===id})[0]}
 function fmtData(v){
   if(!v)return'';var d=new Date(v);
   if(isNaN(d))return String(v);
   return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
-function renderLista(){
-  var tot=contagens.length,div=0,pecas=0;
-  contagens.forEach(function(c){div+=Number(c.divergencias)||0;pecas+=Number(c.total_itens)||0});
-  document.getElementById('kpis').innerHTML=
-    '<div class="kpi"><b>'+tot+'</b><span>contagens</span></div>'+
-    '<div class="kpi"><b>'+pecas.toLocaleString('pt-BR')+'</b><span>itens contados</span></div>'+
-    '<div class="kpi"><b style="color:'+(div?'var(--dg)':'var(--gn)')+'">'+div+'</b><span>divergências</span></div>';
-  var el=document.getElementById('listaContagens');
-  if(!tot){el.className='vazio';el.textContent='Nenhuma contagem recebida ainda. Manda uma pelo app (☁️ Enviar).';return}
-  el.className='';
-  var ordenado=contagens.slice().sort(function(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)});
-  var h='<table><tr><th>Recebida</th><th>Modo</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Itens</th><th>Diverg.</th><th>Fab</th></tr>';
-  ordenado.forEach(function(c){
-    var d=Number(c.divergencias)||0,nf=Number(c.total_fab)||0;
-    h+='<tr class="clicavel" onclick="abrirDetalhe(\''+String(c.id).replace(/'/g,'')+'\')"><td>'+fmtData(c.recebido_em)+'</td>'+
-       '<td><span class="badge b-bl">'+(c.modo||'')+'</span></td><td>'+(c.nome||'')+'</td><td>'+(c.num_contagem||'')+'</td>'+
-       '<td>'+(c.conferente||'')+'</td><td>'+(c.locacao||'')+'</td><td>'+(c.total_itens||'')+'</td>'+
-       '<td><span class="badge '+(d?'b-dg':'b-gn')+'">'+d+'</span></td>'+
-       '<td>'+(nf?'<span class="badge b-or">⚠ '+nf+'</span>':'')+'</td></tr>';
+function fmtN(n){return (Number(n)||0).toLocaleString('pt-BR')}
+function pct(x){return (x===null||x===undefined||isNaN(x))?'—':x.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'}
+function corPct(x){return x>=95?'var(--gn)':x>=80?'var(--yl)':'var(--dg)'}
+function statusBadge(c){return c.status==='ok'?'<span class="badge b-gn">finalizada</span>':c.status==='and'?'<span class="badge b-or">em andamento</span>':'<span class="badge b-cz">—</span>'}
+function vazioCont(v){return v===''||v===null||v===undefined}
+
+// ===== NAVEGAÇÃO =====
+function renderTudo(){renderTabs();renderAba()}
+function renderTabs(){
+  var h='';
+  CATS.forEach(function(c){
+    var n=contsDe(c.id).length;
+    if(!n&&c.id!=='capacetes'&&abaAtual!==c.id)return;
+    h+='<div class="tab'+(abaAtual===c.id?' ativa':'')+'" onclick="mudarAba(\''+c.id+'\')">'+c.ic+' '+c.rot+'<span class="n">'+n+'</span></div>';
   });
-  el.innerHTML=h+'</table>';
+  h+='<span class="sep"></span>';
+  ADMIN.forEach(function(a){h+='<div class="tab adm'+(abaAtual===a.id?' ativa':'')+'" onclick="mudarAba(\''+a.id+'\')">'+a.ic+' '+a.rot+'</div>'});
+  document.getElementById('tabs').innerHTML=h;
 }
+function mudarAba(id){abaAtual=id;try{localStorage.setItem(TABK,id)}catch(e){}aviso('');renderTudo();window.scrollTo(0,0)}
+function renderAba(){
+  var el=document.getElementById('conteudo');
+  if(abaAtual==='capacetes'){el.innerHTML=htmlCapacetes();iniciarCapacetes();return}
+  if(acharCat(abaAtual)){el.innerHTML=htmlCategoria(acharCat(abaAtual));return}
+  if(abaAtual==='parado'){el.innerHTML=HTML_PARADO;carregarEstoque(renderGarimpo);return}
+  if(abaAtual==='bases'){el.innerHTML=HTML_BASES;document.getElementById('inpPor').value=(function(){try{return localStorage.getItem('inv_dash_por')||''}catch(e){return ''}})();renderBases();return}
+  if(abaAtual==='versoes'){el.innerHTML='<div class="card"><p class="sub">O que mudou em cada atualização — dashboard, backend e coletoras. A versão do app aparece na tela inicial da coletora.</p><div id="versoesArea"></div></div>';renderVersoes();return}
+  if(abaAtual==='arquivo'){el.innerHTML=htmlArquivo();return}
+  abaAtual='capacetes';renderTudo();
+}
+
+// ===== LISTA DE CONTAGENS (comum a todas as categorias) =====
+function tabelaContagens(lista,opt){
+  opt=opt||{};
+  if(!lista.length)return '<div class="vazio">'+(opt.vazio||'Nenhuma contagem desta categoria. Na coletora, use o modo e toque ☁️ Enviar.')+'</div>';
+  var h='<div class="rolar"><table><tr>'+(opt.chk?'<th></th>':'')+'<th>Recebida</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Status</th><th>Itens</th>'+(opt.semDiv?'':'<th>Diverg.</th>')+'<th>Fab</th></tr>';
+  lista.forEach(function(c){
+    var id=esc(c.id),d=Number(c.divergencias)||0,nf=Number(c.total_fab)||0;
+    h+='<tr class="clicavel" onclick="abrirDetalhe(\''+id+'\')">'+
+      (opt.chk?'<td onclick="event.stopPropagation()"><input type="checkbox" class="chkCont" value="'+id+'"></td>':'')+
+      '<td style="white-space:nowrap">'+fmtData(c.recebido_em)+'</td><td>'+(c.categoria==='prateleira'?'🗄️ ':'')+esc(c.nome)+'</td><td>'+esc(c.num_contagem)+'</td>'+
+      '<td>'+esc(c.conferente)+'</td><td>'+esc(c.locacao)+'</td><td>'+statusBadge(c)+'</td><td>'+esc(c.total_itens)+'</td>'+
+      (opt.semDiv?'':'<td>'+(c.categoria==='prateleira'?'<span class="badge b-cz">n/a</span>':'<span class="badge '+(d?'b-dg':'b-gn')+'">'+d+'</span>')+'</td>')+
+      '<td>'+(nf?'<span class="badge b-or">⚠ '+nf+'</span>':'')+'</td></tr>';
+  });
+  return h+'</table></div>';
+}
+// Pares 1ª × 2ª: mesma categoria e mesmo local, a mais recente de cada rodada.
+function paresDe(lista){
+  var porLoc={};
+  lista.slice().sort(porData).forEach(function(c){
+    var k=String(c.locacao||'—'),n=Number(c.num_contagem)||0;if(!n)return;
+    porLoc[k]=porLoc[k]||{};if(!porLoc[k][n])porLoc[k][n]=c;
+  });
+  return Object.keys(porLoc).sort().map(function(k){return {loc:k,r:porLoc[k]}});
+}
+function htmlPares(lista){
+  var ps=paresDe(lista);if(!ps.length)return '';
+  var h='<div class="card"><h2>🔁 1ª × 2ª contagem por local</h2><p class="sub">O dashboard junta sozinho a rodada mais recente de cada local. Cruzar compara uma com a outra: igual = confere; diferente = recontar.</p><div class="rolar"><table><tr><th>Local</th><th>1ª</th><th>2ª</th><th></th></tr>';
+  ps.forEach(function(p){
+    var c1=p.r[1],c2=p.r[2];
+    function cel(c){return c?esc(c.conferente||'—')+' <span class="sub" style="display:inline">'+fmtData(c.recebido_em)+'</span> '+statusBadge(c):'<span class="badge b-or">falta</span>'}
+    h+='<tr><td><b>'+esc(p.loc)+'</b></td><td>'+cel(c1)+'</td><td>'+cel(c2)+'</td><td>'+
+      (c1&&c2?'<button class="btn pq" onclick="cruzarIds([\''+esc(c1.id)+'\',\''+esc(c2.id)+'\'])">Cruzar</button>':(c1?'<button class="btn sec pq" onclick="cruzarIds([\''+esc(c1.id)+'\'])">Só a 1ª × estoque</button>':''))+'</td></tr>';
+  });
+  return h+'</table></div></div>';
+}
+function htmlCategoria(cat){
+  var lista=contsDe(cat.id).sort(porData),it=0,dv=0,fin=0;
+  lista.forEach(function(c){it+=Number(c.total_itens)||0;dv+=Number(c.divergencias)||0;if(c.status==='ok')fin++});
+  return '<div class="kpis">'+
+    '<div class="kpi"><b>'+lista.length+'</b><span>contagens</span></div>'+
+    '<div class="kpi"><b>'+fin+'</b><span>finalizadas</span></div>'+
+    '<div class="kpi"><b>'+fmtN(it)+'</b><span>itens nas contagens</span></div>'+
+    '<div class="kpi"><b style="color:'+(dv?'var(--dg)':'var(--gn)')+'">'+fmtN(dv)+'</b><span>divergências × base</span></div></div>'+
+    htmlPares(lista)+
+    '<div class="card"><div class="linha entre"><h2>'+cat.ic+' Contagens — '+cat.rot+'</h2><div class="linha" style="margin:0">'+
+      '<button class="btn" onclick="cruzarMarcadas()">Cruzar marcadas</button>'+
+      (lista.length?'<button class="btn dg" onclick="encerrarCiclo(\''+cat.id+'\')">💾 Encerrar ciclo</button>':'')+'</div></div>'+
+      '<p class="sub">Toque numa linha para ver os itens. Marque 1 contagem para comparar com o estoque, ou 2+ do MESMO local para cruzar entre si.</p>'+
+      tabelaContagens(lista,{chk:true})+'</div>'+
+    '<div class="card" id="anaCard" style="display:none"></div>'+
+    '<div class="card" id="cardDetalhe" style="display:none"></div>';
+}
+
+// ===== DETALHE DE UMA CONTAGEM =====
+var itensAtual=[],fabAtual=[],contAtual=null;
 function abrirDetalhe(id){
-  contAtual=contagens.filter(function(c){return String(c.id)===id})[0];
-  document.getElementById('cardDetalhe').style.display='block';
-  document.getElementById('detTitulo').textContent=(contAtual.nome||contAtual.modo)+' — '+(contAtual.conferente||'')+' — '+fmtData(contAtual.recebido_em);
-  document.getElementById('detItens').innerHTML='<div class="vazio">Carregando itens…</div>';
-  api('action=getItens&id='+encodeURIComponent(id)).then(function(j){
-    itensAtual=j.ok?(j.itens||[]):[];fabAtual=j.ok?(j.fab||[]):[];renderItens();
-    document.getElementById('cardDetalhe').scrollIntoView({behavior:'smooth'});
+  contAtual=contagens.filter(function(c){return String(c.id)===String(id)})[0];if(!contAtual)return;
+  var el=document.getElementById('cardDetalhe');el.style.display='block';
+  el.innerHTML='<div class="vazio">Carregando itens…</div>';
+  api({action:'getItens',id:id}).then(function(j){
+    itensAtual=j.ok?(j.itens||[]):[];fabAtual=j.ok?(j.fab||[]):[];renderDetalhe();
+    el.scrollIntoView({behavior:'smooth'});
   });
 }
-function renderItens(){
-  var so=document.getElementById('soDiv').checked;
+function renderDetalhe(){
+  var c=contAtual,prat=c.categoria==='prateleira';
+  var so=document.getElementById('soDiv')&&document.getElementById('soDiv').checked;
   var roupa=itensAtual.some(function(i){return i.tamanho||i.cor});
-  var h='<table><tr><th>Código</th><th>Descrição</th><th>Local</th>'+(roupa?'<th>Tam.</th><th>Cor</th>':'')+'<th>Sist.</th><th>Cont.</th><th>Dif.</th></tr>';
-  var n=0;
+  var h='<div class="linha entre"><b>'+esc(c.nome||c.modo)+' — '+esc(c.conferente||'')+' — '+fmtData(c.recebido_em)+' '+statusBadge(c)+'</b><div class="linha" style="margin:0">'+
+    (prat?'':'<label class="chk"><input type="checkbox" id="soDiv" '+(so?'checked':'')+' onchange="renderDetalhe()"> só divergências</label>')+
+    '<button class="btn gn" onclick="exportarXlsx()">⬇ Excel</button><button class="btn sec" onclick="document.getElementById(\'cardDetalhe\').style.display=\'none\'">✕</button></div></div>';
+  if(prat)h+='<p class="nota">Contagem de prateleira: mostra só o que foi bipado ali. O saldo do sistema é o total da loja, então não se compara por prateleira — o confronto com o sistema é nos indicadores da aba Capacetes.</p>';
+  var t='<div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Local</th>'+(roupa?'<th>Tam.</th><th>Cor</th>':'')+(prat?'':'<th>Sist.</th>')+'<th>Cont.</th>'+(prat?'':'<th>Dif.</th>')+'</tr>',n=0;
   itensAtual.forEach(function(i){
-    var temSaldo=i.saldo!==''&&i.saldo!==null&&i.saldo!==undefined;
+    if(prat&&(vazioCont(i.contado)||Number(i.contado)<=0))return;
+    var temSaldo=!vazioCont(i.saldo);
     var dif=temSaldo?Number(i.contado||0)-Number(i.saldo||0):null;
     if(so&&(dif===null||dif===0))return;
     n++;
     var difTxt=dif===null?'—':dif===0?'OK':(dif>0?'+':'')+dif;
     var cls=dif===null?'':dif===0?'dif-ok':dif>0?'dif-mais':'dif-menos';
-    h+='<tr><td style="font-family:monospace">'+i.codigo+(i.extra?' <span class="badge b-or">EXT</span>':'')+'</td><td>'+(i.descricao||'')+'</td><td>'+(i.local||'')+'</td>'+
-       (roupa?'<td>'+(i.tamanho||'')+'</td><td>'+(i.cor||'')+'</td>':'')+
-       '<td>'+(i.saldo===''?'—':i.saldo)+'</td><td><b>'+(i.contado===''?'—':i.contado)+'</b></td><td class="'+cls+'">'+difTxt+'</td></tr>';
+    t+='<tr><td class="mono">'+esc(i.codigo)+(i.extra?' <span class="badge b-or">EXT</span>':'')+'</td><td>'+esc(i.descricao)+'</td><td>'+esc(i.local)+'</td>'+
+      (roupa?'<td>'+esc(i.tamanho)+'</td><td>'+esc(i.cor)+'</td>':'')+
+      (prat?'':'<td>'+(temSaldo?esc(i.saldo):'—')+'</td>')+'<td><b>'+(vazioCont(i.contado)?'—':esc(i.contado))+'</b></td>'+(prat?'':'<td class="'+cls+'">'+difTxt+'</td>')+'</tr>';
   });
-  var hf='';
+  h+=n?t+'</table></div>':'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';
   if(fabAtual&&fabAtual.length){
-    hf='<div style="margin-top:16px"><b style="color:var(--or)">⚠ Códigos do fabricante</b>'+
+    h+='<div style="margin-top:16px"><b style="color:var(--or)">⚠ Códigos do fabricante</b>'+
        '<p class="sub" style="margin:4px 0 6px">Bipados fora da base carregada — NÃO contados, só auditoria (peças que trocaram de código).</p>'+
-       '<table><tr><th>Código</th><th>Bipes</th><th>1º bipe</th><th>Último</th><th>Modo</th></tr>';
-    fabAtual.forEach(function(f){hf+='<tr><td style="font-family:monospace">'+(f.codigo||'')+'</td><td>'+(f.bipes||'')+'</td><td>'+(f.primeiro||'')+'</td><td>'+(f.ultimo||'')+'</td><td>'+(f.modo||'')+'</td></tr>'});
-    hf+='</table></div>';
+       '<div class="rolar"><table><tr><th>Código</th><th>Bipes</th><th>1º bipe</th><th>Último</th><th>Modo</th></tr>';
+    fabAtual.forEach(function(f){h+='<tr><td class="mono">'+esc(f.codigo)+'</td><td>'+esc(f.bipes)+'</td><td>'+esc(f.primeiro)+'</td><td>'+esc(f.ultimo)+'</td><td>'+esc(f.modo)+'</td></tr>'});
+    h+='</table></div></div>';
   }
-  document.getElementById('detItens').innerHTML=(n?h+'</table>':'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>')+hf;
+  document.getElementById('cardDetalhe').innerHTML=h;
 }
 function exportarXlsx(){
   if(!itensAtual.length)return;
   var dados=itensAtual.map(function(i){
-    var temSaldo=i.saldo!==''&&i.saldo!==null;
+    var temSaldo=!vazioCont(i.saldo);
     return {'Código':i.codigo,'Descrição':i.descricao,'Localização':i.local,
             'Tamanho':i.tamanho||'','Cor':i.cor||'','Saldo Sistema':i.saldo,
             'Contado':i.contado,'Diferença':temSaldo?Number(i.contado||0)-Number(i.saldo||0):'',
@@ -402,8 +279,379 @@ function exportarXlsx(){
   }
   XLSX.writeFile(wb,('Contagem-'+(contAtual.nome||contAtual.modo)+'-'+(contAtual.num_contagem||'')+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
 }
-// ===== ANÁLISES (contado × estoque real + garimpo de capital parado) =====
-var estoqueDB=null,estoqueMap={},estoqueMeta=null,anaResult=[],anaContNome='',garimpoResult=[];
+
+// ===== CRUZAMENTO (contado × estoque, ou contagem × contagem) =====
+var anaResult=[],anaMulti=false,anaRotulos=[],anaContNome='',anaCat=null;
+function cruzarMarcadas(){
+  var ids=Array.from(document.querySelectorAll('.chkCont:checked')).map(function(x){return x.value});
+  if(!ids.length){alert('Marque pelo menos uma contagem');return}
+  cruzarIds(ids);
+}
+function cruzarIds(ids){
+  var conts=ids.map(function(id){return contagens.filter(function(x){return String(x.id)===String(id)})[0]}).filter(Boolean);
+  if(!conts.length)return;
+  var locs={};conts.forEach(function(c){locs[String(c.locacao||'')]=1});
+  if(conts.length>1&&Object.keys(locs).length>1&&!confirm('As contagens marcadas são de locais diferentes ('+Object.keys(locs).join(', ')+').\n\nO cruzamento compara valor a valor: o que estiver só numa delas aparece como RECONTAR. Cruzar mesmo assim?'))return;
+  anaCat=catDe(conts[0]);
+  anaMulti=conts.length>1;
+  anaContNome=conts.length===1?((conts[0].nome||conts[0].modo)+' '+(conts[0].locacao||'')):'cruzamento-'+conts.length+'-contagens';
+  anaRotulos=conts.map(function(c){return (c.num_contagem?c.num_contagem+'ª ':'')+(c.conferente||c.nome||'')});
+  var card=document.getElementById('anaCard');card.style.display='block';
+  card.innerHTML='<div class="vazio">'+(anaMulti?'Cruzando '+conts.length+' contagens entre si e com o estoque…':'Cruzando com o estoque…')+'</div>';
+  card.scrollIntoView({behavior:'smooth'});
+  carregarEstoque(function(){
+    api({action:'getItensLote',ids:conts.map(function(c){return c.id}).join(',')}).then(function(j){
+      var res=conts.map(function(c){return {cont:c,itens:(j.ok&&j.itens&&j.itens[c.id])||[]}});
+      anaResult=[];
+      if(!anaMulti){
+        res[0].itens.forEach(function(i){if(vazioCont(i.contado))return;anaResult.push(_cruzarComEstoque(i.codigo,i.descricao,Number(i.contado)||0))});
+      }else{
+        var agg={},ordem=[];
+        res.forEach(function(r,ci){
+          r.itens.forEach(function(i){
+            if(vazioCont(i.contado))return;
+            var k=String(i.codigo).toUpperCase();
+            if(!agg[k]){agg[k]={codigo:i.codigo,descricao:i.descricao||'',local:i.local||'',saldoBase:i.saldo,vals:conts.map(function(){return null})};ordem.push(k)}
+            agg[k].vals[ci]=(agg[k].vals[ci]||0)+(Number(i.contado)||0);
+            if(!agg[k].descricao&&i.descricao)agg[k].descricao=i.descricao;
+            if(vazioCont(agg[k].saldoBase)&&!vazioCont(i.saldo))agg[k].saldoBase=i.saldo;
+          });
+        });
+        ordem.forEach(function(k){
+          var it=agg[k],vals=it.vals.map(function(v){return v===null?0:v});
+          var mx=Math.max.apply(null,vals),mn=Math.min.apply(null,vals),confere=(mx===mn),row;
+          if(confere){row=_cruzarComEstoque(it.codigo,it.descricao,mx);row.obs=row.obs||'✓ contagens conferem'}
+          else{row=_cruzarComEstoque(it.codigo,it.descricao,null);row.contado=null;row.dif=null;row.obs='⚠ RECONTAR — '+(mx-mn)+' un de diferença entre as contagens'}
+          row.vals=vals;row.confere=confere;row.divergeN=mx-mn;row.local=it.local;row.saldoBase=it.saldoBase;
+          anaResult.push(row);
+        });
+      }
+      renderAnalise();
+    }).catch(function(){card.innerHTML='<div class="vazio">Falha ao carregar os itens. Tente de novo.</div>'});
+  });
+}
+function _cruzarComEstoque(codigo,descricao,contado){
+  var e=estoqueMap[String(codigo).toUpperCase()]||{};
+  var contabil=(e.contabil===undefined?null:Number(e.contabil));
+  var dif=(contabil===null||contado===null)?null:contado-contabil;
+  var compr=(Number(e.reserva)||0)+(Number(e.os)||0)+(Number(e.requisicao)||0)+(Number(e.transito)||0);
+  var obs='';
+  if(dif!==null&&dif<0&&compr>0)obs='⚠ comprometido (res '+(Number(e.reserva)||0)+'/OS '+(Number(e.os)||0)+') — confira antes de ajustar';
+  else if(dif!==null&&dif!==0)obs='ajustar '+(dif>0?'+':'')+dif;
+  return {codigo:codigo,desc:e.desc||descricao||'',contado:contado,contabil:contabil,disponivel:e.disponivel,
+    reserva:e.reserva,os:e.os,dif:dif,obsoleto:e.obsoleto||'',ult_venda:e.ult_venda||'',obs:obs};
+}
+function renderAnalise(){
+  var card=document.getElementById('anaCard');if(!card)return;
+  var soEl=document.getElementById('anaSoDiv'),so=soEl?soEl.checked:true;
+  function ehDiv(r){return anaMulti?(r.confere===false):(r.dif!==null&&r.dif!==0)}
+  var rows=anaResult.filter(function(r){return so?ehDiv(r):true}),nDiv=anaResult.filter(ehDiv).length;
+  var cat=acharCat(anaCat)||{};
+  var h='<div class="linha entre"><h2>🔎 '+(anaMulti?'Cruzamento de '+anaRotulos.length+' contagens':'Contado × estoque')+'</h2><div class="linha" style="margin:0">'+
+    '<label class="chk"><input type="checkbox" id="anaSoDiv" '+(so?'checked':'')+' onchange="renderAnalise()"> só divergentes</label>'+
+    '<button class="btn gn" onclick="exportarAnalise()">⬇ Excel</button></div></div>'+
+    '<p class="sub">'+(estoqueMeta?'Estoque: base do dia de '+fmtData(estoqueMeta.gerado_em)+' (saldo contábil ao vivo da MCN).':'Base do dia ainda não gerada — sem o saldo contábil, a coluna Contábil fica "?".')+'</p>'+
+    '<div class="kpis"><div class="kpi"><b>'+fmtN(anaResult.length)+'</b><span>itens</span></div>'+
+    (anaMulti?'<div class="kpi"><b style="color:var(--gn)">'+fmtN(anaResult.length-nDiv)+'</b><span>✓ conferem</span></div><div class="kpi"><b style="color:'+(nDiv?'var(--dg)':'var(--gn)')+'">'+fmtN(nDiv)+'</b><span>⚠ recontar</span></div>'
+     :'<div class="kpi"><b style="color:'+(nDiv?'var(--dg)':'var(--gn)')+'">'+fmtN(nDiv)+'</b><span>divergentes × estoque</span></div>')+'</div>';
+  if(anaMulti&&nDiv&&cat.base)h+='<div class="linha"><button class="btn" onclick="gerarBaseRecontagem(\''+cat.base+'\',anaResult.filter(function(r){return r.confere===false}))">📥 Gerar base de recontagem ('+nDiv+' divergentes)</button><span class="sub" id="recSt" style="margin:0"></span></div>';
+  if(!rows.length){card.innerHTML=h+'<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';return}
+  var colsCont=anaMulti?anaRotulos.map(function(rot){return '<th title="'+esc(rot)+'">'+esc(rot.length>14?rot.substring(0,13)+'…':rot)+'</th>'}).join(''):'<th>Cont.</th>';
+  h+='<div class="rolar"><table><tr><th>Código</th><th>Descrição</th>'+colsCont+(anaMulti?'<th>Status</th>':'')+'<th>Contábil</th><th>Dif.</th><th>Disp.</th><th>Res/OS</th><th>Últ. venda</th><th>Obs.</th></tr>';
+  rows.forEach(function(r){
+    var dcls=r.dif===null?'':r.dif===0?'dif-ok':r.dif>0?'dif-mais':'dif-menos';
+    var dtxt=r.dif===null?(anaMulti&&!r.confere?'—':'?'):r.dif===0?'OK':(r.dif>0?'+':'')+r.dif;
+    var tds=anaMulti?r.vals.map(function(v){return '<td><b>'+v+'</b></td>'}).join('')+'<td>'+(r.confere?'<span class="badge b-gn">✓ confere</span>':'<span class="badge b-dg">⚠ ±'+r.divergeN+'</span>')+'</td>':'<td><b>'+r.contado+'</b></td>';
+    h+='<tr><td class="mono">'+esc(r.codigo)+(r.obsoleto?' <span class="badge b-dg">OBS</span>':'')+'</td><td>'+esc(r.desc)+'</td>'+tds+
+      '<td>'+(r.contabil===null?'?':r.contabil)+'</td><td class="'+dcls+'">'+dtxt+'</td><td>'+(r.disponivel===undefined?'—':esc(r.disponivel))+'</td>'+
+      '<td>'+(Number(r.reserva)||0)+'/'+(Number(r.os)||0)+'</td><td>'+esc(r.ult_venda||'nunca')+'</td><td style="font-size:11px">'+esc(r.obs)+'</td></tr>';
+  });
+  card.innerHTML=h+'</table></div>';
+}
+function exportarAnalise(){
+  if(!anaResult.length){alert('Rode uma análise primeiro');return}
+  var dados=anaResult.map(function(r){
+    var d={'Código':r.codigo,'Descrição':r.desc};
+    if(anaMulti){r.vals.forEach(function(v,i){d[anaRotulos[i]||('Contagem '+(i+1))]=v});d['Status']=r.confere?'confere':'DIVERGE ±'+r.divergeN}
+    else d['Contado']=r.contado;
+    d['Saldo Contábil']=r.contabil;d['Diferença']=r.dif;d['Disponível']=r.disponivel;d['Reserva']=r.reserva;d['O.S.']=r.os;
+    d['Obsoleto']=r.obsoleto;d['Última Venda']=r.ult_venda;d['Observação']=r.obs;
+    return d;});
+  var ws=XLSX.utils.json_to_sheet(dados);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Análise');
+  XLSX.writeFile(wb,('Analise-'+anaContNome+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
+}
+// rows: [{codigo, desc, local, saldoBase|sistema}] — sobe como nova versão de base
+function gerarBaseRecontagem(tipo,rows){
+  if(!rows.length){alert('Sem divergentes para recontar');return}
+  var st=document.getElementById('recSt');
+  if(!confirm('Subir base de recontagem ('+tipo+') com '+rows.length+' código'+(rows.length>1?'s':'')+'?\nEla vira uma nova versão no histórico — na coletora, use 📚 Escolher base.'))return;
+  var pecas=rows.map(function(r){
+    var saldo=!vazioCont(r.saldoBase)?(Number(r.saldoBase)||0):(r.sistema!==undefined?r.sistema:(r.contabil||0));
+    var loc=r.local||'';
+    if(tipo==='locacao')return {codigo:r.codigo,loc:loc||'RECONTAGEM',saldo:saldo,curva:'',marca:'',ultEntrada:'',ultSaida:''};
+    if(tipo==='diaria')return {codigo:r.codigo,desc:r.desc,loc:loc,saldo:saldo,qtdMov:0};
+    return {codigo:r.codigo,desc:r.desc,tipo:'RECONTAGEM',loc:loc,saldo:saldo};
+  });
+  if(st)st.textContent='Enviando '+pecas.length+' peças…';
+  postAdmin({action:'upload_base',tipo:tipo,por:'recontagem (divergentes)',pecas:pecas}).then(function(j){
+    var t=j.ok?'✅ Base de recontagem no ar ('+j.n+' peças). Na coletora: abra o modo, toque 📚 Escolher base e pegue a versão "recontagem".':'Falha: '+(j.erro||'?');
+    if(st)st.textContent=t;else alert(t);
+  }).catch(function(){if(st)st.textContent='Falha ao enviar — tente de novo.'});
+}
+
+// ===== CAPACETES: rodadas + indicadores + mapa =====
+var capItens={},capResult=null;
+function htmlCapacetes(){
+  var gerais=contsDe('capacetes').filter(function(c){return c.categoria!=='prateleira'}).sort(porData);
+  var prats=contsDe('capacetes').filter(function(c){return c.categoria==='prateleira'}).sort(porData);
+  var padrao={};gerais.forEach(function(c){var n=Number(c.num_contagem)||0;if(!padrao[n])padrao[n]=c.id});
+  var marc={};Object.keys(padrao).forEach(function(n){marc[padrao[n]]=1});
+  var rod=gerais.map(function(c){
+    return '<label><input type="checkbox" class="capRod" value="'+esc(c.id)+'" '+(marc[c.id]?'checked':'')+'> <b>'+esc(c.num_contagem)+'ª</b> '+esc(c.conferente||'—')+
+      ' <span class="sub" style="margin:0">'+fmtData(c.recebido_em)+' · '+fmtN(c.total_itens)+' itens</span> '+statusBadge(c)+'</label>';
+  }).join('');
+  return '<div class="kpis" id="capKpis"></div>'+
+  '<div class="card"><h2>📐 Indicadores do inventário de capacetes</h2>'+
+    '<p class="sub">Mesma conta do laudo do bot: em peças, sem valores. A ÚLTIMA rodada marcada é a referência física; rodada que cobre menos de 60% dos códigos da maior é parcial e fica fora.</p>'+
+    '<div class="rodadas">'+(rod||'<div class="vazio" style="padding:10px">Nenhuma rodada geral (🪖 Contagem de Capacetes) recebida ainda.</div>')+
+    '<label><input type="checkbox" id="capPrat"> 🗄️ Varredura das prateleiras <span class="sub" id="capPratInfo" style="margin:0">(soma da contagem mais recente de cada prateleira)</span></label></div>'+
+    '<div class="linha" style="margin-top:10px"><label class="chk"><input type="checkbox" id="capCompleta" checked> contagem completa: capacete com saldo no sistema e não bipado em nenhuma rodada conta como FALTA</label></div>'+
+    '<div class="linha"><button class="btn" onclick="calcularCapacetes()">Calcular indicadores</button></div>'+
+    '<div id="capRes"></div></div>'+
+  '<div class="card"><div class="linha entre"><h2>🗄️ Mapa das prateleiras</h2><div class="linha" style="margin:0">'+
+    '<a class="btn sec" href="prateleiras.html" target="_blank" style="text-decoration:none">Página das vendas ↗</a>'+
+    '<button class="btn gn" onclick="exportarPrateleiras()">⬇ Excel</button></div></div>'+
+    '<p class="sub">O que foi bipado em cada prateleira (1–18) e na Exposição, pela contagem mais recente de cada uma. Fica guardado mesmo depois de encerrar o ciclo.</p>'+
+    '<div id="pratArea" class="vazio">Carregando o mapa…</div></div>'+
+  '<div class="card"><div class="linha entre"><h2>📋 Contagens recebidas</h2>'+
+    ((gerais.length+prats.length)?'<button class="btn dg" onclick="encerrarCiclo(\'capacetes\')">💾 Encerrar ciclo de capacetes</button>':'')+'</div>'+
+    '<details open><summary><b>🪖 Gerais</b> ('+gerais.length+')</summary>'+tabelaContagens(gerais,{vazio:'Nenhuma contagem geral de capacetes.'})+'</details>'+
+    '<details><summary><b>🗄️ Por prateleira</b> ('+prats.length+')</summary>'+tabelaContagens(prats,{semDiv:true,vazio:'Nenhuma contagem por prateleira neste ciclo.'})+'</details></div>'+
+  '<div class="card" id="cardDetalhe" style="display:none"></div>';
+}
+function iniciarCapacetes(){
+  renderCapKpis();
+  carregarMapa(function(){renderMapa();renderCapKpis()});
+}
+function renderCapKpis(){
+  var gerais=contsDe('capacetes').filter(function(c){return c.categoria!=='prateleira'});
+  var locs=mapa?mapa.locais.length:null,un=0,mod={};
+  if(mapa)mapa.locais.forEach(function(l){l.itens.forEach(function(i){un+=i.qtd;mod[i.codigo]=1})});
+  var el=document.getElementById('capKpis');if(!el)return;
+  el.innerHTML='<div class="kpi"><b>'+gerais.length+'</b><span>rodadas gerais</span></div>'+
+    '<div class="kpi"><b>'+(locs===null?'…':locs+'/19')+'</b><span>prateleiras no mapa</span></div>'+
+    '<div class="kpi"><b>'+(mapa?fmtN(un):'…')+'</b><span>capacetes nas prateleiras</span><small>'+(mapa?fmtN(Object.keys(mod).length)+' modelos':'')+'</small></div>'+
+    '<div class="kpi"><b>'+(capResult&&capResult.m?pct(capResult.m.ac_codigo):'—')+'</b><span>acurácia por código</span><small>meta 95%</small></div>';
+  var pi=document.getElementById('capPratInfo');if(pi&&mapa)pi.textContent='(soma da mais recente de cada prateleira · '+locs+' locais · '+fmtN(un)+' un)';
+}
+function carregarMapa(cb){
+  if(mapa){cb&&cb();return}
+  api({action:'getMapa',nocache:1}).then(function(j){mapa={locais:(j.ok&&j.locais)||[]};cb&&cb()})
+  .catch(function(){mapa={locais:[]};var a=document.getElementById('pratArea');if(a)a.textContent='Falha ao carregar o mapa.'});
+}
+var PRATELEIRAS_DASH=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
+function renderMapa(){
+  var area=document.getElementById('pratArea');if(!area)return;
+  var by={};mapa.locais.forEach(function(l){by[l.loc]=l});
+  if(!mapa.locais.length){area.className='vazio';area.textContent='Nenhuma prateleira contada ainda. Use o modo "🗄️ Capacetes por Prateleira" na coletora e ☁️ Enviar.';return}
+  area.className='';
+  var h='<div class="rolar"><table><tr><th>Local</th><th>Modelos</th><th>Capacetes</th><th>Conferente</th><th>Contada em</th></tr>';
+  PRATELEIRAS_DASH.forEach(function(loc){
+    var l=by[loc],un=0;if(l)l.itens.forEach(function(i){un+=i.qtd});
+    h+='<tr'+(l?' class="clicavel" onclick="verPrateleira(\''+esc(loc)+'\')"':'')+'><td><b>'+(loc==='Exposição'?'🛍️ ':'🗄️ ')+esc(loc)+'</b></td>'+
+      (l?'<td>'+l.itens.length+'</td><td><b>'+un+'</b></td><td>'+esc(l.conferente)+'</td><td>'+fmtData(l.recebido_em)+'</td>':'<td colspan="4"><span class="badge b-or">não contada</span></td>')+'</tr>';
+  });
+  h+='</table></div><div id="pratVer"></div>';
+  var porCod={};
+  mapa.locais.forEach(function(l){l.itens.forEach(function(i){if(!porCod[i.codigo])porCod[i.codigo]={desc:i.descricao,locs:[]};porCod[i.codigo].locs.push(l.loc+' ('+i.qtd+')')})});
+  var dup=Object.keys(porCod).filter(function(c){return porCod[c].locs.length>1});
+  h+='<details style="margin-top:10px"'+(dup.length?'':' ')+'><summary><b>🔁 Capacetes em mais de uma prateleira</b> ('+dup.length+') — candidatos a juntar</summary>';
+  if(!dup.length)h+='<div class="vazio">Nenhum — cada capacete está numa só prateleira. 🎉</div>';
+  else{h+='<div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Prateleiras</th></tr>';dup.forEach(function(c){h+='<tr><td class="mono">'+esc(c)+'</td><td>'+esc(porCod[c].desc)+'</td><td>'+esc(porCod[c].locs.join(', '))+'</td></tr>'});h+='</table></div>'}
+  area.innerHTML=h+'</details>';
+}
+function verPrateleira(loc){
+  var l=mapa.locais.filter(function(x){return x.loc===loc})[0],el=document.getElementById('pratVer');if(!l||!el)return;
+  var h='<div class="card" style="margin:10px 0 0;background:var(--bg)"><div class="linha entre"><b>'+esc(loc)+'</b><button class="btn sec pq" onclick="document.getElementById(\'pratVer\').innerHTML=\'\'">✕</button></div>';
+  h+=l.itens.length?'<div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Qtd</th></tr>'+l.itens.map(function(i){return '<tr><td class="mono">'+esc(i.codigo)+'</td><td>'+esc(i.descricao)+'</td><td><b>'+i.qtd+'</b></td></tr>'}).join('')+'</table></div>':'<p class="sub">— nada contado —</p>';
+  el.innerHTML=h+'</div>';el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function exportarPrateleiras(){
+  var linhas=[];
+  if(mapa)PRATELEIRAS_DASH.forEach(function(loc){var l=mapa.locais.filter(function(x){return x.loc===loc})[0];if(l)l.itens.forEach(function(i){linhas.push({'Prateleira':loc,'Código':i.codigo,'Descrição':i.descricao,'Qtd':i.qtd,'Conferente':l.conferente,'Contada em':fmtData(l.recebido_em)})})});
+  if(!linhas.length){alert('Nada para exportar — nenhuma prateleira no mapa.');return}
+  var ws=XLSX.utils.json_to_sheet(linhas);ws['!cols']=[{wch:14},{wch:16},{wch:36},{wch:6},{wch:14},{wch:16}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Prateleiras');
+  XLSX.writeFile(wb,'Prateleiras-capacetes-'+new Date().toISOString().substring(0,10)+'.xlsx');
+}
+// Porta do inventario.acuracia() do bot (whatsapp-agente-claude/inventario.py).
+// rodadas: [{rot, ct:{COD:qtd}}] em ordem cronológica; a última é a referência.
+// sal: {COD:{cont, desc}}; nunca: {COD:{saldo,desc}} (varrido e não achado = 0).
+function acuraciaInv(rodadas,sal,nunca){
+  var ref=Object.assign({},rodadas[rodadas.length-1].ct),S2=Object.assign({},sal);
+  Object.keys(nunca||{}).forEach(function(c){if(ref[c]!==undefined)return;if(!S2[c])S2[c]={cont:nunca[c].saldo,desc:nunca[c].desc};ref[c]=0});
+  var u={};rodadas.forEach(function(r){Object.keys(r.ct).forEach(function(c){u[c]=1})});Object.keys(ref).forEach(function(c){u[c]=1});
+  Object.keys(S2).forEach(function(c){if(S2[c].cont!==null&&S2[c].cont!==undefined)u[c]=1});
+  var cods=Object.keys(u).filter(function(c){return S2[c]&&S2[c].cont!==null&&S2[c].cont!==undefined}).sort();
+  if(!cods.length)return null;
+  var S=0,F=0,E=0,erros={};
+  cods.forEach(function(c){S+=S2[c].cont;F+=(ref[c]||0);erros[c]=(ref[c]||0)-S2[c].cont;E+=Math.abs(erros[c])});
+  var exatos=cods.filter(function(c){return erros[c]===0});
+  var iguais=cods.filter(function(c){if(!rodadas.every(function(r){return r.ct[c]!==undefined}))return false;var v={};rodadas.forEach(function(r){v[r.ct[c]]=1});return Object.keys(v).length===1});
+  var baseConf=cods.filter(function(c){return rodadas.some(function(r){return r.ct[c]!==undefined})});if(!baseConf.length)baseConf=cods;
+  var nF=0,nS=0;cods.forEach(function(c){if(erros[c]<0)nF-=erros[c];else nS+=erros[c]});
+  return {cods:cods,S:S,F:F,E:E,erros:erros,ref:ref,sal:S2,exatos:exatos.length,iguais:iguais,n_falta:nF,n_sobra:nS,
+    ac_codigo:100*exatos.length/cods.length,ac_peca:S?100*(1-E/S):0,liquida:S?100*(F-S)/S:0,confianca:100*iguais.length/baseConf.length,
+    firme:iguais.filter(function(c){return erros[c]!==0}).length};
+}
+function calcularCapacetes(){
+  var ids=Array.from(document.querySelectorAll('.capRod:checked')).map(function(x){return x.value});
+  var comPrat=document.getElementById('capPrat').checked,completa=document.getElementById('capCompleta').checked;
+  var res=document.getElementById('capRes');
+  if(!ids.length&&!comPrat){res.innerHTML='<div class="nota av">Marque ao menos uma rodada.</div>';return}
+  res.innerHTML='<div class="vazio">Calculando…</div>';
+  var conts=ids.map(function(id){return contagens.filter(function(c){return String(c.id)===id})[0]}).filter(Boolean);
+  carregarEstoque(function(){carregarMapa(function(){
+    var precisa=conts.filter(function(c){return !capItens[c.id]}).map(function(c){return c.id});
+    var go=function(){
+      var rodadas=[],salBase={},descs={},universo={};
+      conts.forEach(function(c){
+        var ct={};
+        (capItens[c.id]||[]).forEach(function(i){
+          var k=String(i.codigo).toUpperCase();descs[k]=descs[k]||i.descricao||'';universo[k]=1;
+          if(!vazioCont(i.saldo)&&salBase[k]===undefined)salBase[k]=Number(i.saldo)||0;
+          if(!vazioCont(i.contado))ct[k]=(ct[k]||0)+(Number(i.contado)||0);
+        });
+        rodadas.push({rot:(c.num_contagem||'?')+'ª '+(c.conferente||''),t:new Date(c.recebido_em).getTime()||0,ct:ct});
+      });
+      if(comPrat&&mapa.locais.length){
+        var ct={},t=0;mapa.locais.forEach(function(l){t=Math.max(t,new Date(l.recebido_em).getTime()||0);l.itens.forEach(function(i){var k=String(i.codigo).toUpperCase();ct[k]=(ct[k]||0)+i.qtd;descs[k]=descs[k]||i.descricao})});
+        rodadas.push({rot:'🗄️ Prateleiras',t:t,ct:ct});
+      }
+      rodadas.sort(function(a,b){return a.t-b.t});
+      var mx=Math.max.apply(null,rodadas.map(function(r){return Object.keys(r.ct).length}).concat([0]));
+      rodadas.forEach(function(r){r.n=Object.keys(r.ct).length;r.parcial=r.n<mx*0.6});
+      var validas=rodadas.filter(function(r){return !r.parcial});
+      if(!validas.length){res.innerHTML='<div class="nota av">Nenhuma rodada com contagem.</div>';return}
+      // saldo do sistema: contábil ao vivo (base do dia) > saldo da base usada na contagem
+      var sal={},fonteVivo=0,fonteBase=0,todos={};
+      validas.forEach(function(r){Object.keys(r.ct).forEach(function(k){todos[k]=1})});
+      if(completa)Object.keys(universo).forEach(function(k){todos[k]=1});
+      Object.keys(todos).forEach(function(k){
+        var e=estoqueMap[k];
+        if(e&&e.contabil!==undefined&&e.contabil!==''){sal[k]={cont:Number(e.contabil)||0,desc:e.desc||descs[k]};fonteVivo++}
+        else if(salBase[k]!==undefined){sal[k]={cont:salBase[k],desc:descs[k]};fonteBase++}
+      });
+      var nunca={};
+      if(completa)Object.keys(universo).forEach(function(k){
+        if(validas.some(function(r){return r.ct[k]!==undefined}))return;
+        if(sal[k]&&sal[k].cont>0)nunca[k]={saldo:sal[k].cont,desc:sal[k].desc};
+      });
+      // só entra na conta quem foi contado ou é "nunca" (saldo>0 não bipado)
+      var salConta={};Object.keys(sal).forEach(function(k){if(nunca[k]||validas.some(function(r){return r.ct[k]!==undefined}))salConta[k]=sal[k]});
+      var m=acuraciaInv(validas,salConta,nunca);
+      capResult={m:m,rodadas:rodadas,validas:validas,nunca:nunca,descs:descs,fonteVivo:fonteVivo,fonteBase:fonteBase};
+      renderCapacetesRes();renderCapKpis();
+    };
+    if(!precisa.length){go();return}
+    api({action:'getItensLote',ids:precisa.join(',')}).then(function(j){precisa.forEach(function(id){capItens[id]=(j.ok&&j.itens&&j.itens[id])||[]});go()})
+    .catch(function(){res.innerHTML='<div class="nota av">Falha ao carregar os itens.</div>'});
+  })});
+}
+function renderCapacetesRes(){
+  var r=capResult,el=document.getElementById('capRes');if(!el)return;
+  if(!r.m){el.innerHTML='<div class="nota av">Sem saldo do sistema para os códigos contados.</div>';return}
+  var m=r.m,uma=r.validas.length<2;
+  var h='<div class="kpis" style="margin-top:12px">'+
+    '<div class="kpi"><b style="color:'+corPct(m.ac_codigo)+'">'+pct(m.ac_codigo)+'</b><span>acurácia por código</span><small>'+m.exatos+' de '+m.cods.length+' exatos · meta 95%</small></div>'+
+    '<div class="kpi"><b style="color:'+corPct(m.ac_peca)+'">'+pct(m.ac_peca)+'</b><span>acurácia por peça</span><small>erro de '+fmtN(m.E)+' pç em '+fmtN(m.S)+'</small></div>'+
+    '<div class="kpi"><b>'+(m.liquida>0?'+':'')+pct(m.liquida)+'</b><span>divergência líquida</span><small>falta e sobra se anulam</small></div>'+
+    '<div class="kpi"><b style="color:'+(uma?'var(--tx3)':corPct(m.confianca))+'">'+(uma?'—':pct(m.confianca))+'</b><span>confiança da contagem</span><small>'+(uma?'precisa de 2 rodadas':m.iguais.length+' códigos iguais em todas')+'</small></div></div>'+
+    '<p class="sub">Sistema '+fmtN(m.S)+' pç · físico '+fmtN(m.F)+' pç · faltam '+fmtN(m.n_falta)+' · sobram '+fmtN(m.n_sobra)+
+    (m.firme?' · <b style="color:var(--or)">'+m.firme+' código'+(m.firme>1?'s':'')+' em que as rodadas concordam e o sistema discorda</b> (erro do sistema)':'')+'</p>'+
+    '<p class="sub">Rodadas: '+r.rodadas.map(function(x){return esc(x.rot)+' ('+fmtN(x.n)+' códigos'+(x.parcial?' — <b style="color:var(--or)">parcial, fora da conta</b>':'')+')'}).join(' → ')+' · referência física: <b>'+esc(r.validas[r.validas.length-1].rot)+'</b></p>'+
+    '<p class="sub">Saldo do sistema: '+(r.fonteVivo?fmtN(r.fonteVivo)+' códigos pela base do dia'+(estoqueMeta?' ('+fmtData(estoqueMeta.gerado_em)+')':''):'')+(r.fonteBase?(r.fonteVivo?' · ':'')+fmtN(r.fonteBase)+' pela base da contagem':'')+
+    (Object.keys(r.nunca).length?' · '+Object.keys(r.nunca).length+' com saldo e não bipados entram como falta':'')+'</p>';
+  h+='<div class="linha"><select id="capFiltro" onchange="renderCapTabela()"><option value="div">Só divergentes</option><option value="rec">Só recontar (rodadas discordam)</option><option value="sis">Só erro do sistema (rodadas concordam)</option><option value="todos">Todos</option></select>'+
+    '<button class="btn gn" onclick="exportarCapacetes()">⬇ Excel</button>'+
+    (uma?'':'<button class="btn" onclick="recontarCapacetes()">📥 Base de recontagem (discordam)</button>')+'<span class="sub" id="recSt" style="margin:0"></span></div><div id="capTab"></div>';
+  el.innerHTML=h;renderCapTabela();
+}
+function linhasCap(){
+  var r=capResult,m=r.m,uma=r.validas.length<2,ig={};m.iguais.forEach(function(c){ig[c]=1});
+  return m.cods.map(function(c){
+    var vals=r.validas.map(function(x){return x.ct[c]===undefined?null:x.ct[c]});
+    // recontar = alguma rodada contou e elas não deram o mesmo número. Capacete
+    // com saldo que nenhuma rodada achou é FALTA (como no laudo), não recontagem.
+    var contado=vals.some(function(v){return v!==null}),e=m.erros[c],st;
+    var discorda=!uma&&contado&&!ig[c];
+    if(discorda)st='rec';else if(e===0)st='ok';else if(!contado||uma)st=e<0?'falta':'sobra';else st='sis';
+    return {codigo:c,desc:(m.sal[c]&&m.sal[c].desc)||r.descs[c]||'',vals:vals,sistema:m.sal[c].cont,fisico:m.ref[c]||0,dif:e,st:st,nunca:!!r.nunca[c]};
+  });
+}
+function renderCapTabela(){
+  var f=document.getElementById('capFiltro').value,r=capResult;
+  var ls=linhasCap().filter(function(l){return f==='todos'?true:f==='div'?l.dif!==0||l.st==='rec':f==='rec'?l.st==='rec':l.st==='sis'});
+  ls.sort(function(a,b){return Math.abs(b.dif)-Math.abs(a.dif)});
+  var el=document.getElementById('capTab');
+  if(!ls.length){el.innerHTML='<div class="vazio">Nada nesse filtro 🎉</div>';return}
+  var ST={ok:'<span class="badge b-gn">✓ exato</span>',rec:'<span class="badge b-dg">⚠ recontar</span>',sis:'<span class="badge b-or">ajustar sistema</span>',falta:'<span class="badge b-dg">falta</span>',sobra:'<span class="badge b-bl">sobra</span>'};
+  var h='<div class="rolar"><table><tr><th>Código</th><th>Descrição</th>'+r.validas.map(function(x){return '<th>'+esc(x.rot.length>14?x.rot.substring(0,13)+'…':x.rot)+'</th>'}).join('')+'<th>Sistema</th><th>Dif.</th><th>Status</th></tr>';
+  ls.slice(0,400).forEach(function(l){
+    var cls=l.dif===0?'dif-ok':l.dif>0?'dif-mais':'dif-menos';
+    h+='<tr><td class="mono">'+esc(l.codigo)+'</td><td>'+esc(l.desc)+'</td>'+l.vals.map(function(v){return '<td>'+(v===null?'<span class="sub" style="margin:0">'+(l.nunca?'0':'—')+'</span>':'<b>'+v+'</b>')+'</td>'}).join('')+
+      '<td>'+l.sistema+'</td><td class="'+cls+'">'+(l.dif>0?'+':'')+l.dif+'</td><td>'+ST[l.st]+'</td></tr>';
+  });
+  el.innerHTML=h+'</table></div>'+(ls.length>400?'<p class="sub">mostrando 400 de '+ls.length+' — baixe o Excel pra lista completa</p>':'');
+}
+function exportarCapacetes(){
+  if(!capResult||!capResult.m)return;
+  var r=capResult,ROT={ok:'exato',rec:'recontar',sis:'ajustar sistema',falta:'falta',sobra:'sobra'};
+  var dados=linhasCap().map(function(l){var d={'Código':l.codigo,'Descrição':l.desc};r.validas.forEach(function(x,i){d[x.rot]=l.vals[i]===null?'':l.vals[i]});d['Sistema']=l.sistema;d['Físico (ref.)']=l.fisico;d['Diferença']=l.dif;d['Status']=ROT[l.st];return d});
+  var m=r.m,ind=[{'Indicador':'Acurácia por código','Valor':m.ac_codigo.toFixed(1)+'%'},{'Indicador':'Acurácia por peça','Valor':m.ac_peca.toFixed(1)+'%'},{'Indicador':'Divergência líquida','Valor':m.liquida.toFixed(1)+'%'},{'Indicador':'Confiança','Valor':r.validas.length<2?'—':m.confianca.toFixed(1)+'%'},{'Indicador':'Sistema (pç)','Valor':m.S},{'Indicador':'Físico (pç)','Valor':m.F},{'Indicador':'Faltam (pç)','Valor':m.n_falta},{'Indicador':'Sobram (pç)','Valor':m.n_sobra}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ind),'Indicadores');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(dados),'Códigos');
+  XLSX.writeFile(wb,'Inventario-capacetes-'+new Date().toISOString().substring(0,10)+'.xlsx');
+}
+function recontarCapacetes(){
+  var ls=linhasCap().filter(function(l){return l.st==='rec'});
+  gerarBaseRecontagem('capacetes',ls.map(function(l){return {codigo:l.codigo,desc:l.desc,local:'',sistema:l.sistema}}));
+}
+
+// ===== CICLO =====
+function encerrarCiclo(catId){
+  var cat=acharCat(catId),n=contsDe(catId).length;if(!cat)return;
+  if(!confirm('💾 ENCERRAR CICLO — '+cat.rot.toUpperCase()+'\n\nIsso vai:\n1. Salvar uma cópia COMPLETA da planilha no Drive (com data e hora);\n2. Apagar as '+n+' contagens de '+cat.rot+(catId==='capacetes'?' (gerais e por prateleira)':'')+'.\n\nAs outras categorias, as bases, o estoque do dia'+(catId==='capacetes'?' e o MAPA DAS PRATELEIRAS (página das vendas)':'')+' FICAM.\n\nContinuar?'))return;
+  if(!confirm('Última confirmação: as contagens de '+cat.rot+' serão APAGADAS do sistema (a cópia fica no Drive).'))return;
+  aviso('⏳ Salvando cópia no Drive e limpando '+esc(cat.rot)+'…');
+  postAdmin({action:'arquivar_limpar',categorias:cat.inclui}).then(function(j){
+    if(j.ok){aviso('✅ Arquivado no Drive: <a href="'+esc(j.url)+'" target="_blank" style="color:var(--bl)">'+esc(j.nome)+'</a> — '+(j.contagens_limpas||0)+' contagens de '+esc(cat.rot)+' encerradas.');capItens={};capResult=null;carregarSilencioso()}
+    else aviso('❌ Falha: '+esc(j.erro||'?')+' — nada foi apagado.','av');
+  }).catch(function(){aviso('❌ Falha ao falar com o backend — nada foi apagado. Tente de novo.','av')});
+}
+function carregarSilencioso(){mapa=null;api({action:'getData'}).then(function(j){if(j.ok){contagens=j.contagens||[];renderTudo()}})}
+function htmlArquivo(){
+  return '<div class="card"><h2>🗄️ Arquivar e limpar TUDO</h2><p class="sub">Salva uma cópia completa da planilha no Drive e apaga as contagens de TODAS as categorias. As bases, o estoque do dia e o mapa das prateleiras ficam. Para encerrar só uma categoria, use o botão 💾 dentro da aba dela.</p>'+
+    '<button class="btn dg" onclick="limparTudo()">💾 Arquivar e limpar todas as contagens</button></div>';
+}
+function limparTudo(){
+  if(!confirm('💾 ARQUIVAR E LIMPAR TUDO\n\nSalva a cópia no Drive e apaga as '+contagens.length+' contagens de todas as categorias.\nBases, estoque e mapa das prateleiras ficam.\n\nContinuar?'))return;
+  if(!confirm('Última confirmação: TODAS as contagens serão apagadas (a cópia fica no Drive).'))return;
+  aviso('⏳ Salvando cópia no Drive e limpando…');
+  postAdmin({action:'arquivar_limpar'}).then(function(j){
+    if(j.ok){aviso('✅ Arquivado no Drive: <a href="'+esc(j.url)+'" target="_blank" style="color:var(--bl)">'+esc(j.nome)+'</a> — contagens zeradas.');capItens={};capResult=null;carregarSilencioso()}
+    else aviso('❌ Falha: '+esc(j.erro||'?')+' — nada foi apagado.','av');
+  }).catch(function(){aviso('❌ Falha ao falar com o backend — nada foi apagado.','av')});
+}
+
+// ===== ESTOQUE (base do dia) =====
+function carregarEstoque(cb){
+  if(estoqueDB){cb&&cb();return}
+  api({action:'getEstoque'}).then(function(j){
+    estoqueDB=(j.ok&&j.pecas)||[];estoqueMeta=j.meta||null;estoqueMap={};
+    estoqueDB.forEach(function(p){estoqueMap[String(p.codigo).toUpperCase()]=p});
+    cb&&cb();
+  }).catch(function(){estoqueDB=[];cb&&cb()});
+}
 function fmtRS(n){return 'R$ '+(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function mesesDesde(dstr){
   if(!dstr)return Infinity; // nunca vendeu
@@ -411,157 +659,14 @@ function mesesDesde(dstr){
   var d=new Date(+p[2],+p[1]-1,+p[0]);if(isNaN(d))return Infinity;
   return (Date.now()-d.getTime())/(1000*60*60*24*30.44);
 }
-function initAnalise(){
-  var el=document.getElementById('anaContList');
-  var ord=contagens.slice().sort(function(a,b){return new Date(b.recebido_em)-new Date(a.recebido_em)});
-  if(!ord.length){el.innerHTML='<span class="sub">— nenhuma contagem recebida —</span>'}
-  else{
-    el.innerHTML=ord.map(function(c){
-      var rot=(c.modo||'')+(c.locacao?' · '+c.locacao:'')+' — '+(c.nome||'')+' ('+fmtData(c.recebido_em)+')';
-      return '<label style="display:block;padding:2px 0;cursor:pointer"><input type="checkbox" class="anaChk" value="'+String(c.id).replace(/"/g,'')+'"> '+rot+'</label>';
-    }).join('');
-  }
-  carregarEstoque(function(){renderGarimpo()});
-}
-function anaMarcarTodas(v){document.querySelectorAll('.anaChk').forEach(function(x){x.checked=v})}
-function carregarEstoque(cb){
-  if(estoqueDB){cb&&cb();return}
-  document.getElementById('garimpoArea').innerHTML='<div class="vazio">Carregando base do dia…</div>';
-  api('action=getEstoque').then(function(j){
-    estoqueDB=(j.ok&&j.pecas)||[];estoqueMeta=j.meta||null;estoqueMap={};
-    estoqueDB.forEach(function(p){estoqueMap[String(p.codigo).toUpperCase()]=p});
-    var info='Base do dia: '+(estoqueMeta?fmtData(estoqueMeta.gerado_em)+' · '+estoqueMeta.n+' peças':'não gerada ainda — rode o estoque_diario');
-    document.getElementById('anaInfo').textContent=info;
-    document.getElementById('garimpoInfo').textContent=info;
-    cb&&cb();
-  }).catch(function(){document.getElementById('garimpoArea').innerHTML='<div class="vazio">Falha ao carregar a base do dia.</div>'});
-}
-var anaMulti=false,anaNumConts=0,anaRotulos=[];
-function _cruzarComEstoque(codigo,descricao,contado){
-  // cruzamento contado × estoque — mesmo cálculo do modo single
-  var e=estoqueMap[String(codigo).toUpperCase()]||{};
-  var contabil=(e.contabil===undefined?null:Number(e.contabil));
-  var dif=contabil===null?null:contado-contabil;
-  var compr=(Number(e.reserva)||0)+(Number(e.os)||0)+(Number(e.requisicao)||0)+(Number(e.transito)||0);
-  var obs='';
-  if(dif!==null&&dif<0&&compr>0)obs='⚠ comprometido (res '+(Number(e.reserva)||0)+'/OS '+(Number(e.os)||0)+') — confira antes de ajustar';
-  else if(dif!==null&&dif!==0)obs='ajustar '+(dif>0?'+':'')+dif;
-  return {codigo:codigo,desc:e.desc||descricao||'',contado:contado,
-    contabil:contabil,disponivel:e.disponivel,reserva:e.reserva,os:e.os,dif:dif,
-    obsoleto:e.obsoleto||'',ult_venda:e.ult_venda||'',custo:Number(e.custo)||0,
-    venda:Number(e.venda)||0,capital:Number(e.capital_parado)||0,obs:obs};
-}
-function rodarAnalise(){
-  var ids=Array.from(document.querySelectorAll('.anaChk:checked')).map(function(x){return x.value});
-  if(!ids.length){alert('Marque pelo menos uma contagem');return}
-  var conts=ids.map(function(id){return contagens.filter(function(x){return String(x.id)===String(id)})[0]}).filter(Boolean);
-  anaMulti=conts.length>1;anaNumConts=conts.length;
-  anaContNome=conts.length===1?((conts[0].nome||conts[0].modo)+' '+(conts[0].locacao||'')):'cruzamento-'+conts.length+'-contagens';
-  anaRotulos=conts.map(function(c){return c.nome||((c.modo||'')+' '+(c.locacao||''))});
-  document.getElementById('anaReconta').style.display='none';
-  document.getElementById('anaRecSt').textContent='';
-  document.getElementById('anaArea').innerHTML='<div class="vazio">'+(anaMulti?'Cruzando '+conts.length+' contagens entre si e com o estoque…':'Cruzando com o estoque…')+'</div>';
-  carregarEstoque(function(){
-    Promise.all(conts.map(function(c){
-      return api('action=getItens&id='+encodeURIComponent(c.id)).then(function(j){return {cont:c,itens:(j.ok&&j.itens)||[]}}).catch(function(){return {cont:c,itens:[]}});
-    })).then(function(res){
-      anaResult=[];
-      if(!anaMulti){
-        // 1 contagem: contado × estoque (comportamento original)
-        res[0].itens.forEach(function(i){
-          if(i.contado===''||i.contado===null||i.contado===undefined)return;
-          anaResult.push(_cruzarComEstoque(i.codigo,i.descricao,Number(i.contado)||0));
-        });
-      }else{
-        // 2+: CRUZAMENTO entre contagens — não soma; confere valor a valor
-        var agg={},ordem=[];
-        res.forEach(function(r,ci){
-          r.itens.forEach(function(i){
-            if(i.contado===''||i.contado===null||i.contado===undefined)return;
-            var k=String(i.codigo).toUpperCase();
-            if(!agg[k]){agg[k]={codigo:i.codigo,descricao:i.descricao||'',local:i.local||'',saldoBase:i.saldo,vals:conts.map(function(){return null})};ordem.push(k)}
-            agg[k].vals[ci]=(agg[k].vals[ci]||0)+(Number(i.contado)||0);
-            if(!agg[k].descricao&&i.descricao)agg[k].descricao=i.descricao;
-            if((agg[k].saldoBase===''||agg[k].saldoBase===null||agg[k].saldoBase===undefined)&&i.saldo!==''&&i.saldo!==null)agg[k].saldoBase=i.saldo;
-          });
-        });
-        ordem.forEach(function(k){
-          var it=agg[k];
-          var vals=it.vals.map(function(v){return v===null?0:v}); // não bipado = 0
-          var mx=Math.max.apply(null,vals),mn=Math.min.apply(null,vals);
-          var confere=(mx===mn);
-          var row;
-          if(confere){
-            row=_cruzarComEstoque(it.codigo,it.descricao,mx);
-            row.obs=row.obs||'✓ contagens conferem';
-          }else{
-            row=_cruzarComEstoque(it.codigo,it.descricao,null);
-            row.contado=null;row.dif=null;
-            row.obs='⚠ RECONTAR — divergência de '+(mx-mn)+' un entre contagens';
-          }
-          row.vals=vals;row.confere=confere;row.divergeN=mx-mn;
-          row.local=it.local;row.saldoBase=it.saldoBase;
-          anaResult.push(row);
-        });
-      }
-      renderAnalise();
-    });
-  });
-}
-function gerarBaseRecontagem(){
-  var div=anaResult.filter(function(r){return r.confere===false});
-  if(!div.length){alert('Sem divergentes para recontar');return}
-  var tipo=document.getElementById('anaRecTipo').value;
-  var st=document.getElementById('anaRecSt');
-  if(!confirm('Subir base de recontagem ('+tipo+') com '+div.length+' código'+(div.length>1?'s':'')+' divergente'+(div.length>1?'s':'')+'?\nEla vira uma nova versão no histórico — na coletora, use 📚 Escolher base.'))return;
-  var pecas=div.map(function(r){
-    var saldo=(r.saldoBase!==''&&r.saldoBase!==null&&r.saldoBase!==undefined)?(Number(r.saldoBase)||0):(r.contabil||0);
-    var loc=r.local||'';
-    if(tipo==='locacao')return {codigo:r.codigo,loc:loc||'RECONTAGEM',saldo:saldo,curva:'',marca:'',ultEntrada:'',ultSaida:''};
-    if(tipo==='diaria')return {codigo:r.codigo,desc:r.desc,loc:loc,saldo:saldo,qtdMov:0};
-    return {codigo:r.codigo,desc:r.desc,tipo:'RECONTAGEM',loc:loc,saldo:saldo}; // capacetes/tipo
-  });
-  st.textContent='Enviando '+pecas.length+' peças…';
-  fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({action:'upload_base',senha:senha(),tipo:tipo,por:'recontagem (divergentes)',pecas:pecas})})
-  .then(function(r){return r.json()}).then(function(j){
-    if(j.ok)st.textContent='✅ Base de recontagem no ar ('+j.n+' peças). Na coletora: abra o modo, toque 📚 Escolher base e pegue a versão "recontagem".';
-    else st.textContent='Falha: '+(j.erro||'?');
-  }).catch(function(){st.textContent='Falha ao enviar — tente de novo.'});
-}
-function renderAnalise(){
-  var so=document.getElementById('anaSoDiv').checked;
-  // divergente: no cruzamento = contagens não conferem; no single = dif contra o estoque
-  function ehDiv(r){return anaMulti?(r.confere===false):(r.dif!==null&&r.dif!==0)}
-  var rows=anaResult.filter(function(r){return so?ehDiv(r):true});
-  var nDiv=anaResult.filter(ehDiv).length;
-  var capDiv=anaResult.reduce(function(a,r){return a+(r.dif&&r.dif<0?Math.abs(r.dif)*r.custo:0)},0);
-  var k='<div class="kpi"><b>'+anaNumConts+'</b><span>'+(anaMulti?'contagens cruzadas':'contagem incluída')+'</span></div>'+
-    '<div class="kpi"><b>'+anaResult.length+'</b><span>itens</span></div>';
-  if(anaMulti)k+='<div class="kpi"><b style="color:var(--gn)">'+(anaResult.length-nDiv)+'</b><span>✓ conferem</span></div>'+
-    '<div class="kpi"><b style="color:'+(nDiv?'var(--dg)':'var(--gn)')+'">'+nDiv+'</b><span>⚠ divergem (recontar)</span></div>';
-  else k+='<div class="kpi"><b style="color:'+(nDiv?'var(--dg)':'var(--gn)')+'">'+nDiv+'</b><span>divergentes</span></div>';
-  k+='<div class="kpi"><b style="color:var(--or)">'+fmtRS(capDiv)+'</b><span>capital em falta</span></div>';
-  document.getElementById('anaKpis').innerHTML=k;
-  document.getElementById('anaReconta').style.display=(anaMulti&&nDiv)?'flex':'none';
-  if(!rows.length){document.getElementById('anaArea').innerHTML='<div class="vazio">Nada a mostrar'+(so?' (sem divergências 🎉)':'')+'.</div>';return}
-  var colsCont=anaMulti?anaRotulos.map(function(rot){return '<th title="'+rot.replace(/"/g,'')+'">'+(rot.length>16?rot.substring(0,15)+'…':rot)+'</th>'}).join(''):'<th>Cont.</th>';
-  var h='<table><tr><th>Código</th><th>Descrição</th>'+colsCont+(anaMulti?'<th>Status</th>':'')+'<th>Contábil</th><th>Dif.</th><th>Disp.</th><th>Res/OS</th><th>Últ. venda</th><th>Custo</th><th>Venda</th><th>Obs.</th></tr>';
-  rows.forEach(function(r){
-    var dcls=r.dif===null?'':r.dif===0?'dif-ok':r.dif>0?'dif-mais':'dif-menos';
-    var dtxt=r.dif===null?(anaMulti&&!r.confere?'—':'?'):r.dif===0?'OK':(r.dif>0?'+':'')+r.dif;
-    var obso=r.obsoleto?' <span class="badge b-dg">OBS</span>':'';
-    var tdsCont=anaMulti
-      ?r.vals.map(function(v){return '<td><b>'+v+'</b></td>'}).join('')+'<td>'+(r.confere?'<span class="badge b-gn">✓ confere</span>':'<span class="badge b-dg">⚠ ±'+r.divergeN+'</span>')+'</td>'
-      :'<td><b>'+r.contado+'</b></td>';
-    h+='<tr><td style="font-family:monospace">'+r.codigo+obso+'</td><td>'+r.desc+'</td>'+
-       tdsCont+'<td>'+(r.contabil===null?'?':r.contabil)+'</td>'+
-       '<td class="'+dcls+'">'+dtxt+'</td><td>'+(r.disponivel===undefined?'—':r.disponivel)+'</td>'+
-       '<td>'+(Number(r.reserva)||0)+'/'+(Number(r.os)||0)+'</td><td>'+(r.ult_venda||'nunca')+'</td>'+
-       '<td>'+fmtRS(r.custo)+'</td><td>'+fmtRS(r.venda)+'</td><td style="font-size:11px">'+r.obs+'</td></tr>';
-  });
-  document.getElementById('anaArea').innerHTML=h+'</table>';
-}
+
+var HTML_PARADO='<div class="card"><div class="linha entre"><h2>💰 Estoque parado — capital travado</h2>'+
+  '<div class="linha" style="margin:0"><label style="font-size:12px;color:var(--tx2)">sem venda há</label>'+
+  '<select id="anaMeses" onchange="renderGarimpo()"><option value="6">6 meses</option><option value="12" selected>12 meses</option><option value="24">24 meses</option></select>'+
+  '<button class="btn gn" onclick="exportarGarimpo()">⬇ Excel</button></div></div>'+
+  '<p class="sub">Não é contagem: é o estoque da base do dia sem venda no período, ordenado pelo valor parado. Serve pra priorizar o que vender.</p>'+
+  '<p class="sub" id="garimpoInfo"></p><div class="rolar"><div id="garimpoArea" class="vazio">Carregando a base do dia…</div></div></div>';
+var garimpoResult=[];
 function renderGarimpo(){
   if(!estoqueDB){carregarEstoque(renderGarimpo);return}
   var meses=Number(document.getElementById('anaMeses').value)||12;
@@ -580,18 +685,6 @@ function renderGarimpo(){
   });
   document.getElementById('garimpoArea').innerHTML=h+'</table>'+(garimpoResult.length>150?'<p class="sub">mostrando as 150 de maior capital — baixe o Excel pra lista completa</p>':'');
 }
-function exportarAnalise(){
-  if(!anaResult.length){alert('Rode uma análise primeiro');return}
-  var dados=anaResult.map(function(r){
-    var d={'Código':r.codigo,'Descrição':r.desc};
-    if(anaMulti){r.vals.forEach(function(v,i){d[anaRotulos[i]||('Contagem '+(i+1))]=v});d['Status']=r.confere?'confere':'DIVERGE ±'+r.divergeN}
-    else d['Contado']=r.contado;
-    d['Saldo Contábil']=r.contabil;d['Diferença']=r.dif;d['Disponível']=r.disponivel;d['Reserva']=r.reserva;d['O.S.']=r.os;
-    d['Obsoleto']=r.obsoleto;d['Última Venda']=r.ult_venda;d['Custo']=r.custo;d['Preço Venda']=r.venda;d['Observação']=r.obs;
-    return d;});
-  var ws=XLSX.utils.json_to_sheet(dados);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Análise');
-  XLSX.writeFile(wb,('Analise-'+anaContNome+'.xlsx').replace(/[\/:*?"<>|]/g,'-'));
-}
 function exportarGarimpo(){
   if(!garimpoResult.length){alert('Nada no garimpo');return}
   var dados=garimpoResult.map(function(p){return {'Código':p.codigo,'Descrição':p.desc,'Curva':p.curva,
@@ -600,7 +693,18 @@ function exportarGarimpo(){
   var ws=XLSX.utils.json_to_sheet(dados);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Garimpo');
   XLSX.writeFile(wb,'Garimpo-pecas-paradas-'+(document.getElementById('anaMeses').value)+'m.xlsx');
 }
+
 // ===== BASES (upload da planilha pelo computador) =====
+var HTML_BASES='<div class="card"><p class="sub" style="margin-bottom:8px">Suba aqui a planilha do Microwork — as coletoras baixam a base sozinhas (não se importa mais planilha no aparelho).</p>'+
+  '<div class="linha"><label style="font-size:13px;color:var(--tx2)">Quem está enviando:</label><input id="inpPor" placeholder="seu nome" style="width:180px"></div></div>'+
+  [['capacetes','🪖 Base da Contagem de Capacetes','(Listagem de Mercadoria — filtra capacetes dos tipos CAPACETES+BOUTIQUE, inclui saldo zero; usada também pela contagem por prateleira)'],
+   ['diaria','📊 Base da Contagem Diária','(Saída de Mercadoria)'],
+   ['locacao','📍 Base da Contagem por Locação','(Planilha de Localização)'],
+   ['tipo','🏷️ Base da Contagem por Tipo','(Listagem de Mercadoria com a coluna Tipo Mercadoria)']].map(function(b){
+    return '<div class="card"><b>'+b[1]+'</b> <span class="sub" style="display:inline">'+b[2]+'</span>'+
+      '<p class="sub" id="meta-'+b[0]+'" style="margin:6px 0">…</p>'+
+      '<div class="linha"><input type="file" id="file-'+b[0]+'" accept=".xlsx,.xls,.csv"><button class="btn" onclick="uploadBase(\''+b[0]+'\')">Enviar base</button></div>'+
+      '<p class="sub" id="st-'+b[0]+'"></p><div id="hist-'+b[0]+'"></div></div>'}).join('');
 function normalizarLoc(loc){if(!loc)return 'SEM LOCAL';loc=loc.trim().toUpperCase();if(loc===''||loc==='0'||loc==='00'||loc==='[SEM LOCAL]')return 'SEM LOCAL';return loc}
 function formatarDataXlsx(v){
   if(!v&&v!==0)return '';
@@ -729,6 +833,73 @@ function uploadBase(tipo){
     }).catch(function(){st.textContent='Falha ao enviar — tente de novo.'});
   });
 }
+
+// Changelog curado (dashboard + coletoras). Mais novo primeiro.
+var CHANGELOG=[
+  {data:'20/10/26',area:'Dashboard',ver:'Abas por categoria',itens:[
+    'As contagens não ficam mais misturadas: uma aba por categoria (🪖 Capacetes, 📊 Diária, 📍 Locação, 🏷️ Tipo, 👕 Roupas, ✋ Livre). A coletora passou a dizer de que modo é cada contagem.',
+    'Aba Capacetes: indicadores do inventário iguais aos do laudo do bot (acurácia por código, por peça, líquida e confiança, em peças), mapa das prateleiras e a lista de contagens gerais e por prateleira.',
+    'Pares 1ª × 2ª montados sozinhos por local, com botão Cruzar. O cruzamento avisa quando as contagens são de locais diferentes.',
+    'Contagem por prateleira não mostra mais divergência falsa (o saldo do sistema é o total da loja, não o da prateleira).',
+    '💾 Encerrar ciclo agora é por categoria e NÃO apaga o mapa das prateleiras (a página das vendas continua funcionando). Limpar tudo ficou em 🗄️ Arquivo.',
+    'Estoque parado, Bases e Versões foram para o fim das abas.']},
+  {data:'20/10/26',area:'Backend',ver:'@13',itens:[
+    'Categoria gravada em cada contagem (as antigas são reconhecidas pelo local).',
+    'Segurança: o token das coletoras só envia contagem e lê base e mapa. Trocar/apagar base e ler o estoque com custo exige a senha.',
+    'A senha do dashboard não vai mais na URL (leitura por POST).']},
+  {data:'20/10/26',area:'Coletoras',ver:'Netum v30 / Eyoyo v37',itens:[
+    'O envio passou a dizer a categoria da contagem (Capacetes, Prateleira, Tipo, Locação…). Atualize o app: feche e abra de novo com internet.']},
+  {data:'22/09/26',area:'Vendas',ver:'Netum v29 / backend @12',itens:[
+    'Nova página "Onde está o capacete?" (leandrolcruz.github.io/cole-Moto-Caldas/prateleiras.html) pro pessoal de vendas: busca por nome ou código e mostra a prateleira; grade das 18 prateleiras + Exposição com o que tem em cada uma. Atualiza sozinha a cada 5 min (contagem mais recente de cada prateleira).']},
+  {data:'22/09/26',area:'Backend',ver:'@11',itens:[
+    'Hora de recebimento das contagens e das bases estava 7h atrasada (planilha no fuso de Los Angeles). Datas agora gravadas como texto ISO, sem passar pelo fuso, e as antigas corrigidas.']},
+  {data:'17/09/26',area:'Coletoras',ver:'Netum v28 / Eyoyo v36',itens:[
+    'Item bipado fica PISCANDO na lista (com barra azul na lateral) até o próximo bipe — não se perde mais qual foi o último contado. Vale pra Livre, Diária, Locação, Tipo, Capacetes e Prateleiras.']},
+  {data:'17/09/26',area:'Coletoras',ver:'Netum v27 / Eyoyo v35',itens:[
+    'Capacetes por Prateleira: botão "☁️ Enviar todas" na lista de prateleiras — manda a contagem mais recente de cada prateleira de uma vez, com resumo no final. O botão mostra quantas já foram contadas e quantas faltam enviar.']},
+  {data:'17/09/26',area:'Coletoras',ver:'Netum v26 / Eyoyo v34',itens:[
+    'Capacetes por Prateleira: agora são 18 prateleiras (+ Exposição) — eram 13. Aba 🗄️ do dashboard acompanha.']},
+  {data:'09/09/26',area:'Dashboard',ver:'Salvar e limpar',itens:[
+    'Botão 💾 Salvar e limpar (no topo): salva uma cópia completa da planilha na pasta do Drive (com data/hora) e zera as contagens — bases e estoque ficam. Fecha o ciclo do inventário.']},
+  {data:'09/09/26',area:'Dashboard',ver:'Análises: cruzamento de contagens',itens:[
+    'Marque 2+ contagens (checkbox, com "marcar todas") e a análise CRUZA uma com a outra: valores iguais = ✓ confere (aí sim compara com o estoque); valores diferentes = ⚠ recontar.',
+    'Botão "📥 Gerar base de recontagem": sobe só os códigos divergentes como nova versão de base — na coletora, 📚 Escolher base → versão "recontagem" e bipa só eles.',
+    'Com 1 contagem marcada, funciona como antes (contado × estoque).']},
+  {data:'09/09/26',area:'Coletoras',ver:'Netum v23 / Eyoyo v32',itens:[
+    'Novo modo "🗄️ Capacetes por Prateleira": escolha a prateleira (1–13) ou a Exposição e bipe o que está nela — sem a trava de agrupamento (2 iguais na mesma prateleira é normal).',
+    'Usa a mesma base dos capacetes; código fora dela cai em auditoria (fabricante), como nos outros modos.']},
+  {data:'09/09/26',area:'Dashboard',ver:'Prateleiras',itens:[
+    'Nova aba "🗄️ Prateleiras": mapa do que foi bipado em cada prateleira/Exposição (contagem mais recente) + lista de capacetes que aparecem em mais de uma. Export em Excel.']},
+  {data:'04/09/26',area:'Dashboard',ver:'Análises',itens:[
+    'Nova aba "Análises": cruza o contado com o estoque real (contábil, disponível, reserva, O.S., requisição) — faça antes de qualquer ajuste.',
+    'Mostra divergentes com obsoleto, última venda, custo, preço de venda e alerta de "comprometido" (reserva/O.S.) pra não ajustar errado.',
+    'Garimpo de peças paradas: capital travado por tempo sem venda (6/12/24 meses), pra priorizar o que vender. Export em Excel.',
+    'Base do dia enriquecida (rotina 3112 + Listagem) atualizada automaticamente.']},
+  {data:'04/09/26',area:'Coletoras',ver:'Netum v22 / Eyoyo v31',itens:[
+    'Histórico de bases: o contador ESCOLHE qual base contar ao abrir o modo (📚 Escolher base) — não força mais a mais nova.']},
+  {data:'04/09/26',area:'Dashboard',ver:'Bases',itens:[
+    'Histórico de versões de cada base (data, quem subiu, nº de peças) com botão de apagar.']},
+  {data:'04/09/26',area:'Coletoras',ver:'Netum v21 / Eyoyo v30',itens:[
+    'Código do fabricante: bipe fora da base carregada NÃO conta — fica guardado só pra auditoria, com aviso na hora.',
+    'Correção: a base nova do dashboard chega sozinha na coletora (antes a base velha ficava presa).']},
+  {data:'04/09/26',area:'Dashboard',ver:'Fabricante',itens:[
+    'Coluna "Fab" na lista de contagens + bloco de códigos do fabricante no detalhe + aba no Excel.']},
+  {data:'04/09/26',area:'Base',ver:'Capacetes',itens:[
+    'Base de capacetes refeita com TODOS os capacetes (com e sem estoque), descrições completas — 1.115 itens.']},
+];
+function renderVersoes(){
+  var h='';
+  CHANGELOG.forEach(function(v){
+    var cor=v.area==='Coletoras'?'b-or':v.area==='Base'?'b-gn':'b-bl';
+    h+='<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+       '<div class="linha" style="margin-bottom:4px"><span class="badge '+cor+'">'+v.area+'</span>'+
+       '<b>'+v.ver+'</b><span class="sub" style="margin-left:auto">'+v.data+'</span></div>'+
+       '<ul style="margin:0 0 0 18px;font-size:13px;color:var(--tx2)">'+
+       v.itens.map(function(i){return '<li style="margin:2px 0">'+i+'</li>'}).join('')+'</ul></div>';
+  });
+  document.getElementById('versoesArea').innerHTML=h;
+}
+
 // boot
 if(senha())testar();
 document.getElementById('inpSenha').addEventListener('keydown',function(e){if(e.key==='Enter')entrar()});
