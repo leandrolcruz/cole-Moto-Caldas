@@ -207,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v29</b> (22/09/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v30</b> (20/10/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -2019,6 +2019,12 @@ setTimeout(autoAtualizarCatalogo,3000);
 // ===== ENVIO PRO DASHBOARD (backend Apps Script do inventário) =====
 var INV_API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
 var INV_TOKEN='mc-inv-2026';
+// Categoria do que foi contado — os modos Locação, Tipo, Capacetes e Prateleira
+// são todos modo 'locacao' e só se distinguem pelas flags (o dashboard separa por isto)
+function _categoriaContagem(c){
+  if(c.modo!=='locacao')return c.modo||'livre';
+  return c.porPrateleira?'prateleira':c.porCapacete?'capacetes':c.porTipo?'tipo':'locacao';
+}
 function _payloadContagem(c){
   var itens=[];
   if(c.modo==='roupa'){
@@ -2030,7 +2036,7 @@ function _payloadContagem(c){
   if(!c.envioId){c.envioId=c.modo+'-'+Date.now()+'-'+Math.floor(Math.random()*1e6);saveDB()}
   var fab=[];for(var fc in (c.fab||{})){var f=c.fab[fc];fab.push({codigo:fc,qtd:f.qtd,primeiro:f.primeiro||'',ultimo:f.ultimo||'',modo:f.modo||c.modo})}
   return {token:INV_TOKEN,contagem:{
-    id:c.envioId,origem:'q900',modo:c.modo,nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens,fab:fab}};
+    id:c.envioId,origem:'q900',modo:c.modo,categoria:_categoriaContagem(c),nome:c.nome||'',numContagem:c.numContagem||'',conferente:c.conferente||'',data:c.data||'',status:c.status||'',locacao:c.locacao||'',totalBipes:c.totalBipes||0,itens:itens,fab:fab}};
 }
 function enviarContagem(){
   if(!INV_API_URL){toast('Envio ainda não configurado — avise o Leandro');return}
