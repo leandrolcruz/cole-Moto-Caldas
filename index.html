@@ -207,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v30</b> (20/10/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v31</b> (30/10/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -463,6 +463,8 @@
 <div class="modal-ov" id="modNova"><div class="modal">
   <h3>Nova Contagem Livre</h3>
   <label>Nome</label><input type="text" id="inpNome" placeholder="Ex: Inventário Peças Abril/2026">
+  <label>Quem está contando</label>
+  <select id="selConfLivre" class="selContador" style="font-size:16px"></select>
   <div class="ma"><button class="btn btn-sf" onclick="closeM('modNova')">Cancelar</button><button class="btn btn-ac" onclick="criarLivre()">Criar</button></div>
 </div></div>
 
@@ -539,15 +541,8 @@
 <div class="modal-ov" id="modConferente"><div class="modal">
   <h3 id="modConfTit">Iniciar Contagem</h3>
   <p style="font-size:12px;color:var(--tx2);margin-bottom:12px" id="modConfSub"></p>
-  <label>Conferente</label>
-  <select id="selConferente" style="font-size:16px">
-    <option value="">Selecione...</option>
-    <option value="Júlia">Júlia</option>
-    <option value="Leandro">Leandro</option>
-    <option value="Luiz">Luiz</option>
-    <option value="Patrícia">Patrícia</option>
-    <option value="Victor">Victor</option>
-  </select>
+  <label>Quem está contando</label>
+  <select id="selConferente" class="selContador" style="font-size:16px"></select>
   <div class="ma"><button class="btn btn-sf" onclick="closeM('modConferente')">Cancelar</button><button class="btn btn-bl" onclick="confirmarConferente()">Iniciar</button></div>
 </div></div>
 
@@ -585,15 +580,8 @@
   <p style="font-size:12px;color:var(--tx2);margin-bottom:12px" id="modConfRoupaSub">Selecione o conferente</p>
   <label>Nome da contagem</label>
   <input type="text" id="inpNomeRoupa" placeholder="Ex: Roupas Abril/2026">
-  <label>Conferente</label>
-  <select id="selConfRoupa" style="font-size:16px">
-    <option value="">Selecione...</option>
-    <option value="Júlia">Júlia</option>
-    <option value="Leandro">Leandro</option>
-    <option value="Luiz">Luiz</option>
-    <option value="Patrícia">Patrícia</option>
-    <option value="Victor">Victor</option>
-  </select>
+  <label>Quem está contando</label>
+  <select id="selConfRoupa" class="selContador" style="font-size:16px"></select>
   <div class="ma"><button class="btn btn-sf" onclick="closeM('modConfRoupa')">Cancelar</button><button class="btn btn-or" onclick="criarRoupa()">Criar</button></div>
 </div></div>
 
@@ -609,6 +597,15 @@
 
 <script>
 var DB='inv_q900',BK='inv_q900_base',LK='inv_q900_loc_base';
+// Quem está contando — lista fixa (vale pros 2 apps e pro dashboard); o último
+// escolhido fica pré-selecionado no aparelho (inv_q900_contador).
+var CONTADORES=['João','Jullya','Leandro','Luiz','Patrícia','Victor'],CTK='inv_q900_contador';
+function ultimoContador(){try{var v=localStorage.getItem(CTK)||'';return CONTADORES.indexOf(v)>=0?v:''}catch(e){return ''}}
+function lembrarContador(v){try{localStorage.setItem(CTK,v)}catch(e){}}
+function popularContadores(){
+  var sels=document.querySelectorAll('select.selContador'),u=ultimoContador();
+  for(var i=0;i<sels.length;i++){var h='<option value="">Selecione...</option>';for(var j=0;j<CONTADORES.length;j++)h+='<option value="'+CONTADORES[j]+'">'+CONTADORES[j]+'</option>';sels[i].innerHTML=h;sels[i].value=u}
+}
 var TK='inv_q900_tipo_base',CK='inv_q900_cap_base',CKM='inv_q900_cap_base_meta',tmpCapCod='',locModoAtual='locacao';
 var PRATELEIRAS=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
 var _prateleiraPendente=false;
@@ -802,10 +799,13 @@ function confirmarDelC(){
 }
 
 // ===== CONTAGEM LIVRE =====
-function novaLivre(){openM('modNova')}
+function novaLivre(){document.getElementById('selConfLivre').value=ultimoContador();openM('modNova')}
 function criarLivre(){
+  var conf=document.getElementById('selConfLivre').value;
+  if(!conf){toast('Selecione quem está contando');return}
+  lembrarContador(conf);
   var nome=document.getElementById('inpNome').value.trim()||'Contagem '+(db.c.length+1);
-  db.c.push({nome:nome,modo:'livre',data:now(),status:'and',itens:{},ordem:[],totalBipes:0});
+  db.c.push({nome:nome,modo:'livre',conferente:conf,data:now(),status:'and',itens:{},ordem:[],totalBipes:0});
   saveDB();closeM('modNova');document.getElementById('inpNome').value='';
   cur=db.c.length-1;abrirLivre();
 }
@@ -965,7 +965,7 @@ function iniciarDiaria(){
   pendingLoc=''; // Limpar para diferenciar de locação
   document.getElementById('modConfTit').textContent=pendingDiariaNum+'ª Contagem Diária';
   document.getElementById('modConfSub').textContent='Selecione o conferente para a '+pendingDiariaNum+'ª contagem';
-  document.getElementById('selConferente').value='';
+  document.getElementById('selConferente').value=ultimoContador();
   openM('modConferente');
 }
 function criarDiariaComConferente(conf){
@@ -1453,7 +1453,7 @@ function pedirConferente(loc){
     pendingNum=maxN+1;
     document.getElementById('modConfTit').textContent=pendingNum+'ª Contagem — '+(_prat?loc:'Capacetes');
     document.getElementById('modConfSub').textContent='Selecione o conferente para a '+pendingNum+'ª contagem';
-    document.getElementById('selConferente').value='';
+    document.getElementById('selConferente').value=ultimoContador();
     openM('modConferente');
     return;
   }
@@ -1471,12 +1471,13 @@ function pedirConferente(loc){
   pendingNum=tem1?2:1;
   document.getElementById('modConfTit').textContent=pendingNum+'ª Contagem — '+loc;
   document.getElementById('modConfSub').textContent='Selecione o conferente para a '+pendingNum+'ª contagem';
-  document.getElementById('selConferente').value='';
+  document.getElementById('selConferente').value=ultimoContador();
   openM('modConferente');
 }
 function confirmarConferente(){
   var conf=document.getElementById('selConferente').value;
-  if(!conf){toast('Selecione o conferente');return}
+  if(!conf){toast('Selecione quem está contando');return}
+  lembrarContador(conf);
   closeM('modConferente');
   if(pendingLoc){abrirContLoc(pendingLoc,pendingNum,conf)}
   else{criarDiariaComConferente(conf)}
@@ -2258,13 +2259,14 @@ function abrirRoupas(){
   document.getElementById('modConfRoupaTit').textContent=numCont+'ª Contagem de Roupas';
   document.getElementById('modConfRoupaSub').textContent='Selecione o conferente para a '+numCont+'ª contagem';
   document.getElementById('inpNomeRoupa').value='';
-  document.getElementById('selConfRoupa').value='';
+  document.getElementById('selConfRoupa').value=ultimoContador();
   openM('modConfRoupa');
 }
 
 function criarRoupa(){
   var conf=document.getElementById('selConfRoupa').value;
-  if(!conf){toast('Selecione o conferente');return}
+  if(!conf){toast('Selecione quem está contando');return}
+  lembrarContador(conf);
   var nome=document.getElementById('inpNomeRoupa').value.trim();
   var tem1=false;
   for(var i=0;i<db.c.length;i++){var c=db.c[i];if(c.modo==='roupa'&&c.numContagem===1&&c.status==='ok')tem1=true}
@@ -2540,6 +2542,7 @@ function _exportarRoupasComparativo(contagens,descs){
 // Inicializar
 contarCatalogo(function(){renderCatStatus()});
 
+popularContadores();
 renderHome();
 
 

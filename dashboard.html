@@ -152,7 +152,7 @@ function renderTabs(){
   ADMIN.forEach(function(a){h+='<div class="tab adm'+(abaAtual===a.id?' ativa':'')+'" onclick="mudarAba(\''+a.id+'\')">'+a.ic+' '+a.rot+'</div>'});
   document.getElementById('tabs').innerHTML=h;
 }
-function mudarAba(id){abaAtual=id;try{localStorage.setItem(TABK,id)}catch(e){}aviso('');renderTudo();window.scrollTo(0,0)}
+function mudarAba(id){abaAtual=id;filtroQuem='';try{localStorage.setItem(TABK,id)}catch(e){}aviso('');renderTudo();window.scrollTo(0,0)}
 function renderAba(){
   var el=document.getElementById('conteudo');
   if(abaAtual==='capacetes'){el.innerHTML=htmlCapacetes();iniciarCapacetes();return}
@@ -164,11 +164,30 @@ function renderAba(){
   abaAtual='capacetes';renderTudo();
 }
 
+// ===== QUEM CONTOU (filtro por pessoa, comum a todas as categorias) =====
+// A coletora grava o contador em TODAS as contagens (Netum v31 / Eyoyo v38);
+// contagens antigas sem o campo aparecem como "sem nome".
+var filtroQuem='';
+function quemDe(c){return String(c.conferente||'').trim()||'sem nome'}
+function filtrarQuem(lista){return filtroQuem?lista.filter(function(c){return quemDe(c)===filtroQuem}):lista}
+function setQuem(q){filtroQuem=(filtroQuem===q?'':q);renderTudo()}
+function chipsQuem(lista){
+  if(!lista.length)return '';
+  var por={};lista.forEach(function(c){var q=quemDe(c);por[q]=(por[q]||0)+1});
+  var nomes=Object.keys(por).sort(function(a,b){return a==='sem nome'?1:b==='sem nome'?-1:a.localeCompare(b,'pt-BR')});
+  var h='<div class="linha" style="margin:6px 0 10px;flex-wrap:wrap;gap:6px;align-items:center"><span class="sub" style="margin:0 4px 0 0">👤 Quem contou:</span>'+
+    '<button class="btn pq'+(filtroQuem?' sec':'')+'" onclick="setQuem(\'\')">Todos ('+lista.length+')</button>';
+  nomes.forEach(function(q){h+='<button class="btn pq'+(filtroQuem===q?'':' sec')+'" onclick="setQuem(\''+esc(q)+'\')">'+esc(q)+' ('+por[q]+')</button>'});
+  return h+'</div>';
+}
+
 // ===== LISTA DE CONTAGENS (comum a todas as categorias) =====
 function tabelaContagens(lista,opt){
   opt=opt||{};
+  lista=filtrarQuem(lista);
+  if(!lista.length&&filtroQuem)return '<div class="vazio">Nenhuma contagem de '+esc(filtroQuem)+' nesta lista.</div>';
   if(!lista.length)return '<div class="vazio">'+(opt.vazio||'Nenhuma contagem desta categoria. Na coletora, use o modo e toque ☁️ Enviar.')+'</div>';
-  var h='<div class="rolar"><table><tr>'+(opt.chk?'<th></th>':'')+'<th>Recebida</th><th>Nome</th><th>Nª</th><th>Conferente</th><th>Local</th><th>Status</th><th>Itens</th>'+(opt.semDiv?'':'<th>Diverg.</th>')+'<th>Fab</th></tr>';
+  var h='<div class="rolar"><table><tr>'+(opt.chk?'<th></th>':'')+'<th>Recebida</th><th>Nome</th><th>Nª</th><th>Quem contou</th><th>Local</th><th>Status</th><th>Itens</th>'+(opt.semDiv?'':'<th>Diverg.</th>')+'<th>Fab</th></tr>';
   lista.forEach(function(c){
     var id=esc(c.id),d=Number(c.divergencias)||0,nf=Number(c.total_fab)||0;
     h+='<tr class="clicavel" onclick="abrirDetalhe(\''+id+'\')">'+
@@ -213,7 +232,7 @@ function htmlCategoria(cat){
       '<button class="btn" onclick="cruzarMarcadas()">Cruzar marcadas</button>'+
       (lista.length?'<button class="btn dg" onclick="encerrarCiclo(\''+cat.id+'\')">💾 Encerrar ciclo</button>':'')+'</div></div>'+
       '<p class="sub">Toque numa linha para ver os itens. Marque 1 contagem para comparar com o estoque, ou 2+ do MESMO local para cruzar entre si.</p>'+
-      tabelaContagens(lista,{chk:true})+'</div>'+
+      chipsQuem(lista)+tabelaContagens(lista,{chk:true})+'</div>'+
     '<div class="card" id="anaCard" style="display:none"></div>'+
     '<div class="card" id="cardDetalhe" style="display:none"></div>';
 }
@@ -429,7 +448,7 @@ function htmlCapacetes(){
     '<div id="pratArea" class="vazio">Carregando o mapa…</div></div>'+
   '<div class="card"><div class="linha entre"><h2>📋 Contagens recebidas</h2>'+
     ((gerais.length+prats.length)?'<button class="btn dg" onclick="encerrarCiclo(\'capacetes\')">💾 Encerrar ciclo de capacetes</button>':'')+'</div>'+
-    '<p class="sub">Contagens livres entram aqui sozinhas quando quase todos os códigos bipados são capacetes.</p><details open><summary><b>🪖 Gerais</b> ('+gerais.length+')</summary>'+tabelaContagens(gerais,{vazio:'Nenhuma contagem geral de capacetes.'})+'</details>'+
+    '<p class="sub">Contagens livres entram aqui sozinhas quando quase todos os códigos bipados são capacetes.</p>'+chipsQuem(gerais.concat(prats))+'<details open><summary><b>🪖 Gerais</b> ('+gerais.length+')</summary>'+tabelaContagens(gerais,{vazio:'Nenhuma contagem geral de capacetes.'})+'</details>'+
     '<details><summary><b>🗄️ Por prateleira</b> ('+prats.length+')</summary>'+tabelaContagens(prats,{semDiv:true,vazio:'Nenhuma contagem por prateleira neste ciclo.'})+'</details></div>'+
   '<div class="card" id="cardDetalhe" style="display:none"></div>';
 }
@@ -857,6 +876,11 @@ function uploadBase(tipo){
 
 // Changelog curado (dashboard + coletoras). Mais novo primeiro.
 var CHANGELOG=[
+  {data:'30/10/26',area:'Coletoras',ver:'Netum v31 / Eyoyo v38',itens:[
+    'TODA contagem registra quem está contando — inclusive a Contagem Livre (e a Conferência no iPhone), que antes não pedia. Lista fixa: João, Jullya, Leandro, Luiz, Patrícia e Victor.',
+    'O aparelho lembra o último nome escolhido e já deixa pré-selecionado; basta confirmar. Atualize o app: feche e abra de novo com internet.']},
+  {data:'30/10/26',area:'Dashboard',ver:'Quem contou',itens:[
+    'Coluna "Quem contou" em todas as abas e botões de filtro por pessoa (com o nº de contagens de cada um) acima da lista — toque num nome pra ver só as contagens dele.']},
   {data:'20/10/26',area:'Dashboard',ver:'Abas por categoria',itens:[
     'As contagens de capacete feitas pela Contagem Livre (Cap-Luiz, 1° Cap - Victor...) entram sozinhas na aba Capacetes, agrupadas por dia. As livres com nome de endereço (03A12C-joao) vão para Locação.',
     'As contagens não ficam mais misturadas: uma aba por categoria (🪖 Capacetes, 📊 Diária, 📍 Locação, 🏷️ Tipo, 👕 Roupas, ✋ Livre). A coletora passou a dizer de que modo é cada contagem.',
