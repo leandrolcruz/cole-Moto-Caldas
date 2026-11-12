@@ -22,6 +22,8 @@
  *   getCobertura (coletora)                   → tela da equipe: endereços e data da contagem
  *   getEnderecos (admin)                      → cobertura da locação: universo de
  *                                               endereços + mapa persistente do contado
+ *   upload_divergencias {linhas, conferidos} (admin) → divergência por endereço contra o
+ *                                               saldo ao vivo (locacao_divergencia.py)
  *   upload_enderecos {enderecos} (admin)      → universo de endereços (estoque_diario)
  *   arquivar_limpar {categorias?} (admin)     → arquiva e zera (só as categorias)
  */
@@ -61,6 +63,13 @@ var CAB_END = ['loc', 'contagem_id', 'recebido_em', 'conferente', 'codigo', 'des
 // que é a que vale para a meta, e quantas vezes o endereço já foi contado
 var ABA_END_LOG = 'enderecos_log';
 var CAB_END_LOG = ['loc', 'contagem_id', 'recebido_em', 'conferente'];
+// Divergência de cada endereço contra o saldo ao vivo, calculada pelo bot
+// (locacao_divergencia.py) e trocada inteira a cada envio. Linha com código
+// vazio = endereço conferido (é o que separa "sem divergência" de "aguardando").
+var ABA_END_DIV = 'enderecos_div';
+var CAB_END_DIV = ['loc', 'contagem_id', 'codigo', 'descricao', 'contado', 'fora', 'saldo',
+                   'dif', 'tipo', 'mov_dia', 'reservado', 'valor', 'curva', 'ult_venda'];
+var ABA_END_DIV_META = 'enderecos_div_meta';
 // Universo de endereços da loja (o estoque_diario sobe junto da base do dia):
 // é o denominador da cobertura.
 var ABA_END_UNI = 'enderecos_universo';
@@ -224,6 +233,7 @@ function doPost(e) {
     if (body.action === 'upload_base') return _uploadBase(body);
     if (body.action === 'deleteBase') return _deleteBase(body);
     if (body.action === 'upload_estoque') return _uploadEstoque(body);
+    if (body.action === 'upload_divergencias') return _uploadDivergencias(body);
     if (body.action === 'upload_enderecos') return _uploadEnderecos(body);
     if (body.action === 'arquivar_limpar') return _arquivarLimpar(body);
     if (body.action === 'corrigir_datas') return _corrigirDatas(body);
@@ -715,8 +725,9 @@ function _ler(p) {
     return _json({ok: true, contagens: out});
   }
   if (p.action === 'getEnderecos') {
+    // &itens=1 (o bot): traz também todas as peças de cada endereço
     return _json({ok: true, meta: _metaEnderecos(), universo: _universoEnderecos(),
-                  contados: _endMapa()});
+                  contados: _endMapa(!!p.itens), div: _endDiv()});
   }
   if (p.action === 'getItensLote') {
     // várias contagens numa passada só (o dashboard abria uma chamada por contagem)
@@ -871,7 +882,16 @@ function _mapaDeContagens() {
 // Endereço de uma contagem de locação: o local escolhido na coletora ou, na
 // Contagem Livre, o endereço que abre o nome ("03A12C-joao").
 function _enderecoDaContagem(locacao, nome) {
-  return String(locacao || '').trim().toUpperCase() || _enderecoDoNome(nome);
+  return _locNorm(locacao) || _enderecoDoNome(nome);
+}
+// A planilha lê endereço da coluna E como número em notação científica:
+// "02E02" vira 200, "03E10" vira 30000000000. Desfaz (estante = mantissa sem
+// zero à direita; estantes vão de 01 a 09, então não há ambiguidade).
+function _locNorm(v) {
+  var s = String(v === null || v === undefined ? '' : v).trim().toUpperCase();
+  var m = /^([1-9])(0+)$/.exec(s);
+  if (!m || m[2].length > 99) return s;
+  return '0' + m[1] + 'E' + (m[2].length < 10 ? '0' : '') + m[2].length;
 }
 function _vazio(v) { return v === '' || v === null || v === undefined; }
 // Linhas do mapa para UMA contagem: só o que foi bipado (contado em branco é
@@ -904,9 +924,9 @@ function _endGravar(loc, contagemId, recebido, conferente, itens) {
   // mapa ainda vazio: semeia ANTES, senão este endereço seria o único e as
   // contagens antigas nunca entrariam (quem chama já está com o lock)
   if (v.length < 2) { _endSemearSemLock(); v = sh.getDataRange().getValues(); }
-  for (var i = 1; i < v.length; i++) if (String(v[i][0]) === loc) { atual = v[i]; break; }
+  for (var i = 1; i < v.length; i++) if (_locNorm(v[i][0]) === loc) { atual = v[i]; break; }
   if (atual && String(atual[1]) !== contagemId && _iso(atual[2]) > recebido) return false;
-  _endFiltrar(function (r) { return String(r[0]) !== loc; });
+  _endFiltrar(function (r) { return _locNorm(r[0]) !== loc; });
   _endEscrever(sh, _endLinhas(loc, contagemId, recebido, conferente, itens));
   return true;
 }
@@ -965,7 +985,7 @@ function _endLogResumo() {
   }
   var res = {};
   for (var i = 1; i < v.length; i++) {
-    var loc = String(v[i][0]), t = _iso(v[i][2]);
+    var loc = _locNorm(v[i][0]), t = _iso(v[i][2]);
     if (!loc) continue;
     if (!res[loc]) res[loc] = {primeira_em: t, n: 0};
     res[loc].n++;
@@ -976,7 +996,7 @@ function _endLogResumo() {
 // Tira do mapa as linhas de uma contagem; devolve os endereços afetados.
 function _endTirarContagem(id) {
   var v = _aba(ABA_END, CAB_END).getDataRange().getValues(), locs = {};
-  for (var i = 1; i < v.length; i++) if (String(v[i][1]) === id) locs[String(v[i][0])] = true;
+  for (var i = 1; i < v.length; i++) if (String(v[i][1]) === id) locs[_locNorm(v[i][0])] = true;
   if (Object.keys(locs).length) _endFiltrar(function (r) { return String(r[1]) !== id; });
   return Object.keys(locs);
 }
@@ -1027,15 +1047,20 @@ function _endSemear() {
   try { _endSemearSemLock(); } finally { lk.releaseLock(); }
 }
 // Um registro por endereço contado: resumo + as peças fora do lugar (EXT).
-function _endMapa() {
+function _endMapa(comItens) {
   var sh = _aba(ABA_END, CAB_END), v = sh.getDataRange().getValues();
   if (v.length < 2) { _endSemear(); v = sh.getDataRange().getValues(); }
   var porLoc = {};
   for (var i = 1; i < v.length; i++) {
-    var loc = String(v[i][0]);
+    var loc = _locNorm(v[i][0]);
     if (!porLoc[loc]) porLoc[loc] = {loc: loc, contagem_id: String(v[i][1]), recebido_em: _iso(v[i][2]),
                                     conferente: String(v[i][3] || ''), n_codigos: 0, n_pecas: 0, ext: []};
     var q = Number(v[i][6]) || 0;
+    if (comItens && v[i][4] !== '') {
+      (porLoc[loc].itens = porLoc[loc].itens || []).push({
+        codigo: String(v[i][4]), descricao: String(v[i][5] || ''), qtd: q,
+        extra: String(v[i][7]) === 'EXT', loc_certo: String(v[i][8] || '')});
+    }
     if (v[i][4] === '' || q <= 0) continue;
     porLoc[loc].n_codigos++; porLoc[loc].n_pecas += q;
     if (String(v[i][7]) === 'EXT') {
@@ -1049,8 +1074,61 @@ function _endMapa() {
     var g = log[l] || {};
     porLoc[l].primeira_em = g.primeira_em || porLoc[l].recebido_em;
     porLoc[l].contagens = g.n || 1;
+    if (comItens && !porLoc[l].itens) porLoc[l].itens = [];
     return porLoc[l];
   });
+}
+// ---- divergência contra o saldo ao vivo (vem pronta do bot) ----
+function _uploadDivergencias(body) {
+  if (!_ehAdmin(body)) return _json({ok: false, erro: 'não autorizado'});
+  var linhas = (body.linhas || []).map(function (l) {
+    return [String(l.loc || ''), String(l.contagem_id || ''), String(l.codigo || ''),
+            String(l.descricao || ''), Number(l.contado) || 0, Number(l.fora) || 0,
+            Number(l.saldo) || 0, Number(l.dif) || 0, String(l.tipo || ''),
+            l.mov_dia ? 'S' : '', Number(l.reservado) || 0, Number(l.valor) || 0,
+            String(l.curva || ''), String(l.ult_venda || '')];
+  }).filter(function (r) { return r[0] && r[2]; });
+  (body.conferidos || []).forEach(function (c) {
+    if (c.loc) linhas.push([String(c.loc), String(c.contagem_id || ''), '', '', 0, 0, 0, 0, 'conferido', '', 0, 0, '', '']);
+  });
+  var lk = LockService.getScriptLock();
+  lk.waitLock(30000);
+  try {
+    var sh = _aba(ABA_END_DIV, CAB_END_DIV);
+    sh.clearContents();
+    sh.appendRow(CAB_END_DIV);
+    if (linhas.length) {
+      sh.getRange(2, 1, linhas.length, 3).setNumberFormat('@');
+      sh.getRange(2, 13, linhas.length, 2).setNumberFormat('@');      // "10/11/2026" não vira data
+      sh.getRange(2, 1, linhas.length, CAB_END_DIV.length).setValues(linhas);
+    }
+    var shM = _aba(ABA_END_DIV_META, CAB_EST_META);
+    shM.clearContents();
+    shM.appendRow(CAB_EST_META);
+    shM.appendRow([_agoraISO(), linhas.length, body.por || '']);
+  } finally { lk.releaseLock(); }
+  try { CacheService.getScriptCache().remove('cobertura_enderecos'); } catch (err) {}
+  return _json({ok: true, n: linhas.length});
+}
+// {meta, linhas:[divergências], conferidos:[{loc, contagem_id}]}
+function _endDiv() {
+  var v = _aba(ABA_END_DIV, CAB_END_DIV).getDataRange().getValues(), linhas = [], conf = [];
+  for (var i = 1; i < v.length; i++) {
+    var r = v[i];
+    if (!String(r[0])) continue;
+    if (String(r[2]) === '') {
+      if (String(r[8]) === 'conferido') conf.push({loc: String(r[0]), contagem_id: String(r[1])});
+      continue;
+    }
+    linhas.push({loc: String(r[0]), contagem_id: String(r[1]), codigo: String(r[2]),
+                 descricao: String(r[3] || ''), contado: Number(r[4]) || 0, fora: Number(r[5]) || 0,
+                 saldo: Number(r[6]) || 0, dif: Number(r[7]) || 0, tipo: String(r[8] || ''),
+                 mov_dia: String(r[9]) === 'S', reservado: Number(r[10]) || 0, valor: Number(r[11]) || 0,
+                 curva: String(r[12] || ''), ult_venda: String(r[13] || '')});
+  }
+  var m = _aba(ABA_END_DIV_META, CAB_EST_META).getDataRange().getValues();
+  return {meta: m.length > 1 ? {gerado_em: _iso(m[1][0]), n: m[1][1], por: m[1][2]} : null,
+          linhas: linhas, conferidos: conf};
 }
 function _uploadEnderecos(body) {
   if (!_ehAdmin(body)) return _json({ok: false, erro: 'não autorizado'});

@@ -271,6 +271,8 @@ function iniciarCobertura(){
   .catch(function(){var c=document.getElementById('cobCard');if(c)c.innerHTML='<div class="vazio">Falha ao carregar a cobertura.</div>'});
 }
 // A meta de 10 semanas (plano, semanas, roteiro) fica em meta-locacao.js, compartilhado com a tela da equipe (meta.html).
+// giro pela curva ABC (1ª letra de "AX", "CZ"…): A=0 … D=3, sem curva=4
+function cobGiro(c){var i='ABCD'.indexOf(String(c||'').charAt(0).toUpperCase());return i<0?4:i}
 function cobCalc(){
   var uni={},fora=[],cont={},d=endDados;
   (d.universo||[]).forEach(function(u){var l=String(u.loc).toUpperCase();if(RE_END.test(l))uni[l]=u;else fora.push(u)});
@@ -283,6 +285,20 @@ function cobCalc(){
   var porSem=n28/4,faltam=locs.length-feitos.length;
   var cols={};
   locs.forEach(function(l){var k=l.substring(0,3);cols[k]=cols[k]||{k:k,tot:0,ok:0,locs:[]};cols[k].tot++;if(cont[l])cols[k].ok++;cols[k].locs.push(l)});
+  // divergência contra o saldo ao vivo (vem do bot): só vale a da contagem vigente do endereço
+  var vig={},div=[],comDiv={},conf={},sit={},nSit={fechado:0,div:0,ext:0,aguarda:0};
+  (d.contados||[]).forEach(function(c){vig[String(c.loc).toUpperCase()]=c.contagem_id});
+  ((d.div||{}).linhas||[]).forEach(function(l){var k=String(l.loc).toUpperCase();if(vig[k]===l.contagem_id){div.push(l);comDiv[k]=(comDiv[k]||0)+1}});
+  ((d.div||{}).conferidos||[]).forEach(function(c){var k=String(c.loc).toUpperCase();if(vig[k]===c.contagem_id)conf[k]=true});
+  // maior valor de divergência primeiro (por endereço); dentro do endereço, por código
+  var valEnd={},faltaRS=0,sobraRS=0;
+  div.forEach(function(l){var k=String(l.loc).toUpperCase(),v=Number(l.valor)||0;valEnd[k]=(valEnd[k]||0)+Math.abs(v);if(l.dif<0)faltaRS-=v;else sobraRS+=v});
+  // ordem da análise: giro primeiro (melhor curva ABC entre os códigos divergentes do endereço), depois valor
+  var girEnd={};
+  div.forEach(function(l){var k=String(l.loc).toUpperCase(),g=cobGiro(l.curva);if(girEnd[k]===undefined||g<girEnd[k])girEnd[k]=g});
+  div.sort(function(a,b){var ka=String(a.loc).toUpperCase(),kb=String(b.loc).toUpperCase();return (girEnd[ka]-girEnd[kb])||(valEnd[kb]-valEnd[ka])||ka.localeCompare(kb)||(cobGiro(a.curva)-cobGiro(b.curva))||String(a.codigo).localeCompare(String(b.codigo))});
+  // situação do endereço contado: divergência > aguardando conferência > peça de fora > fechado
+  feitos.forEach(function(l){var s=comDiv[l]?'div':!conf[l]?'aguarda':(cont[l].ext||[]).length?'ext':'fechado';sit[l]=s;nSit[s]++;if(s==='div')cols[l.substring(0,3)].div=(cols[l.substring(0,3)].div||0)+1});
   var ext=[];
   (d.contados||[]).forEach(function(c){(c.ext||[]).forEach(function(e){ext.push({codigo:e.codigo,descricao:e.descricao,qtd:e.qtd,achado:c.loc,certo:e.loc_certo,quem:c.conferente,quando:c.recebido_em})})});
   ext.sort(function(a,b){return String(a.achado).localeCompare(String(b.achado))});
@@ -290,6 +306,7 @@ function cobCalc(){
     n7:n7,porSem:porSem,previsao:(porSem>0&&faltam>0)?new Date(agora+faltam/porSem*7*DIA):null,
     cols:cols,ext:ext,comExt:(d.contados||[]).filter(function(c){return (c.ext||[]).length}).length,
     fora:fora.sort(function(a,b){return (b.cod||0)-(a.cod||0)}),
+    div:div,sit:sit,nSit:nSit,valEnd:valEnd,faltaRS:faltaRS,sobraRS:sobraRS,divMeta:(d.div||{}).meta||null,temDiv:!!d.div,
     rec:(d.contados||[]).filter(function(c){return (c.contagens||1)>1}).sort(function(a,b){return String(a.loc).localeCompare(String(b.loc))}),
     semCad:Object.keys(cont).filter(function(l){return !uni[l]}).sort()};
 }
@@ -309,7 +326,9 @@ function renderCobertura(){
     '<div class="kpi"><b>'+pct(r.codTot?100*r.codOk/r.codTot:0)+'</b><span>dos códigos</span><small>'+fmtN(r.codOk)+' de '+fmtN(r.codTot)+'</small></div>'+
     '<div class="kpi"><b>'+r.n7+'</b><span>endereços nos últimos 7 dias</span><small>média de 4 semanas: '+r.porSem.toLocaleString('pt-BR',{maximumFractionDigits:1})+'/semana</small></div>'+
     '<div class="kpi"><b>'+(r.faltam?(r.previsao?r.previsao.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—'):'🎉')+'</b><span>previsão de término</span><small>'+(r.faltam?(r.previsao?'no ritmo das últimas 4 semanas':'sem contagem nas últimas 4 semanas'):'todos os endereços contados')+'</small></div>'+
-    '<div class="kpi"><b style="color:'+(r.ext.length?'var(--or)':'var(--gn)')+'">'+fmtN(r.ext.length)+'</b><span>códigos fora do lugar</span><small>em '+r.comExt+' endereços</small></div></div>'+htmlCobMeta(r)+
+    '<div class="kpi"><b style="color:'+(r.ext.length?'var(--or)':'var(--gn)')+'">'+fmtN(r.ext.length)+'</b><span>códigos fora do lugar</span><small>em '+r.comExt+' endereços</small></div></div>'+
+    (r.temDiv&&r.divMeta?'<div class="nota">Dos '+fmtN(nF)+' endereços contados: 🔒 <b>'+fmtN(r.nSit.fechado)+'</b> fechados (bateu com o sistema e sem peça de fora) · 🔎 <b style="color:'+(r.nSit.div?'var(--dg)':'inherit')+'">'+fmtN(r.nSit.div)+'</b> com divergência · 📦 <b>'+fmtN(r.nSit.ext)+'</b> só com peça de fora · ⏳ <b>'+fmtN(r.nSit.aguarda)+'</b> aguardando conferência.</div>':'')+
+    htmlCobMeta(r)+
     (r.faltam?'<details style="margin-bottom:10px"><summary><b>🗺️ Roteiro por semana</b> — que colunas contar em cada semana</summary>'+htmlCobRoteiro(r)+'</details>':'');
   // grade estante → coluna
   h+='<p class="sub" style="margin-bottom:0">Por estante e coluna (contados/total). Toque para ver os endereços.</p>';
@@ -317,7 +336,7 @@ function renderCobertura(){
   Object.keys(ests).sort().forEach(function(e){
     var t=0,o=0;ests[e].forEach(function(c){t+=c.tot;o+=c.ok});
     h+='<div class="est">Estante '+esc(e)+' <span class="sub" style="display:inline;font-weight:400">'+o+'/'+t+'</span></div><div class="grade">';
-    ests[e].forEach(function(c){h+='<div class="cel'+(c.ok===c.tot?' c-ok':c.ok?' c-pa':'')+(cobSel===c.k?' c-sel':'')+'" onclick="cobVer(\''+c.k+'\')"><b>'+esc(c.k)+'</b>'+c.ok+'/'+c.tot+'</div>'});
+    ests[e].forEach(function(c){h+='<div class="cel'+(c.ok===c.tot?' c-ok':c.ok?' c-pa':'')+(cobSel===c.k?' c-sel':'')+'" onclick="cobVer(\''+c.k+'\')"><b>'+esc(c.k)+'</b>'+c.ok+'/'+c.tot+(c.div?' <span style="color:var(--dg)" title="endereços com divergência">🔎'+c.div+'</span>':'')+'</div>'});
     h+='</div>';
   });
   h+='<div id="cobVer">'+(cobSel&&r.cols[cobSel]?htmlCobCol(r,r.cols[cobSel]):'')+'</div>';
@@ -327,6 +346,22 @@ function renderCobertura(){
   else{h+='<p class="sub">Levar ao lugar certo ou corrigir a Localização no cadastro. Sai da lista quando o endereço for contado de novo sem ela.</p><div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Qtd</th><th>Achada em</th><th>Cadastro diz</th><th>Quem</th><th>Quando</th></tr>';
     r.ext.slice(0,300).forEach(function(e){h+='<tr><td class="mono">'+esc(e.codigo)+'</td><td>'+esc(e.descricao)+'</td><td><b>'+esc(e.qtd)+'</b></td><td>'+esc(e.achado)+'</td><td>'+esc(e.certo||'—')+'</td><td>'+esc(e.quem)+'</td><td style="white-space:nowrap">'+fmtData(e.quando)+'</td></tr>'});
     h+='</table></div>'+(r.ext.length>300?'<p class="sub">mostrando 300 de '+r.ext.length+' — o Excel traz todas</p>':'')}
+  h+='</details>';
+  // divergências contra o saldo ao vivo: a lista de recontagem
+  h+='<details style="margin-top:10px"'+(r.div.length?' open':'')+'><summary><b>🔎 Divergências</b> ('+r.div.length+' códigos) — contado × saldo do sistema na hora da contagem</summary>';
+  if(!r.temDiv)h+='<div class="nota av">O backend ainda não tem as divergências. Publique a versão nova.</div>';
+  else if(!r.divMeta)h+='<div class="vazio">Ainda não calculado. A conferência roda de madrugada, junto com a base do dia.</div>';
+  else{h+='<p class="sub">Saldo contábil do sistema no momento em que a contagem chegou (saldo de hoje menos o que movimentou depois). O contado soma a peça achada em outros endereços. Conferido em '+fmtData(r.divMeta.gerado_em)+'; contagem nova entra na conferência da madrugada. A lista vem pelo giro: primeiro os endereços com peça de curva A, depois B, C e D; dentro da curva, do maior valor para o menor.</p>'+
+      '<div class="nota">A custo: falta <b style="color:var(--dg)">'+fmtRS(r.faltaRS)+'</b> · sobra <b style="color:var(--bl)">'+fmtRS(r.sobraRS)+'</b>. Falta pode ser peça guardada em endereço que ainda não foi contado.</div>';
+    if(!r.div.length)h+='<div class="vazio">Nenhuma divergência nos endereços conferidos. 🎉</div>';
+    else{h+='<div class="rolar"><table><tr><th>Endereço</th><th>Contagens</th><th>Código</th><th>Descrição</th><th>Curva</th><th>Últ. venda</th><th>Sistema</th><th>Contado aqui</th><th>Achado fora</th><th>Dif.</th><th>Valor</th><th>Obs.</th></tr>';
+      var antLoc='';
+      r.div.slice(0,400).forEach(function(l){var L=String(l.loc).toUpperCase(),k=r.cont[L]||{},obs=[],novo=L!==antLoc;antLoc=L;
+        if(l.tipo==='nao_bipado')obs.push('o cadastro põe aqui; não foi bipado');
+        if(l.mov_dia)obs.push('movimentou no dia da contagem');
+        if(l.dif<0&&l.reservado>0)obs.push('reservado hoje: '+fmtN(l.reservado));
+        h+='<tr><td class="mono" style="white-space:nowrap"><b>'+(novo?esc(l.loc):'')+'</b></td><td>'+(novo?esc(k.contagens||1):'')+'</td><td class="mono">'+esc(l.codigo)+'</td><td>'+esc(l.descricao)+'</td><td>'+esc(l.curva||'')+'</td><td style="white-space:nowrap">'+esc(l.ult_venda||'')+'</td><td>'+fmtN(l.saldo)+'</td><td>'+fmtN(l.contado)+'</td><td>'+(l.fora?fmtN(l.fora):'')+'</td><td><b style="color:'+(l.dif<0?'var(--dg)':'var(--bl)')+'">'+(l.dif>0?'+':'')+fmtN(l.dif)+'</b></td><td style="white-space:nowrap">'+fmtRS(l.valor)+'</td><td class="sub" style="margin:0">'+esc(obs.join(' · '))+'</td></tr>'});
+      h+='</table></div>'+(r.div.length>400?'<p class="sub">mostrando 400 de '+r.div.length+' — o Excel traz todas</p>':'')}}
   h+='</details>';
   // recontagens: controle nosso, não somam na meta
   h+='<details><summary><b>🔁 Endereços recontados</b> ('+r.rec.length+') — 2ª e 3ª contagem, fora da meta</summary>';
@@ -349,7 +384,7 @@ function htmlCobCol(r,c){
   c.locs.forEach(function(l){
     var u=r.uni[l],k=r.cont[l];
     h+='<tr><td class="mono"><b>'+esc(l)+'</b></td><td>'+fmtN(u.cod)+'</td><td>'+fmtN(u.pc)+'</td>'+
-      (k?'<td><span class="badge b-gn">contado</span></td><td>'+esc(k.conferente)+'</td><td style="white-space:nowrap">'+fmtData(k.recebido_em)+'</td><td>'+((k.ext||[]).length?'<span class="badge b-or">'+k.ext.length+'</span>':'')+'</td>'
+      (k?'<td>'+({div:'<span class="badge b-dg">divergência</span>',aguarda:'<span class="badge b-gn">contado</span>',ext:'<span class="badge b-or">peça de fora</span>',fechado:'<span class="badge b-gn">🔒 fechado</span>'})[r.sit[l]||'aguarda']+'</td><td>'+esc(k.conferente)+'</td><td style="white-space:nowrap">'+fmtData(k.recebido_em)+'</td><td>'+((k.ext||[]).length?'<span class="badge b-or">'+k.ext.length+'</span>':'')+'</td>'
         :'<td colspan="4"><span class="badge b-or">falta contar</span></td>')+'</tr>';
   });
   return h+'</table></div></div>';
@@ -367,6 +402,7 @@ function exportarCobertura(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(falta),'Falta contar');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(feito),'Contados');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.ext.map(function(e){return {'Código':e.codigo,'Descrição':e.descricao,'Qtd':e.qtd,'Achada em':e.achado,'Cadastro diz':e.certo,'Quem':e.quem,'Quando':fmtData(e.quando)}})),'Fora do lugar');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.div.map(function(l){return {'Endereço':l.loc,'Código':l.codigo,'Descrição':l.descricao,'Curva':l.curva||'','Última venda':l.ult_venda||'','Sistema (na hora)':l.saldo,'Contado aqui':l.contado,'Achado fora':l.fora,'Dif.':l.dif,'Valor (custo)':l.valor,'Tipo':l.tipo==='nao_bipado'?'não bipado':l.tipo,'Movimentou no dia':l.mov_dia?'sim':'','Reservado hoje':l.reservado||''}})),'Divergências');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.fora.map(function(f){return {'Localização':f.loc,'Códigos':f.cod,'Peças':f.pc}})),'Sem endereço');
   XLSX.writeFile(wb,'Cobertura-locacao-'+new Date().toISOString().substring(0,10)+'.xlsx');
 }
@@ -1015,6 +1051,13 @@ var CHANGELOG=[
     'Gráfico "Meta por semana": uma barra por semana, que sobe conforme os endereços são contados, com a meta da semana tracejada e o acumulado contra o plano embaixo. Verde = bateu a meta; vermelho = semana fechada abaixo; azul = semana em andamento.',
     '"🗺️ Roteiro por semana": a fila dos endereços que faltam, na ordem das estantes, dividida pelas 10 semanas — que colunas contar em cada uma.',
     'Tela da equipe (leandrolcruz.github.io/cole-Moto-Caldas/meta.html), sem senha: o percentual, o gráfico das semanas e o roteiro da semana com os endereços que faltam em cada coluna. Mostra só endereço e data — sem peça, quantidade, custo ou nome. Atualiza sozinha; dá para imprimir.']},
+  {data:'12/11/26',area:'Dashboard',ver:'Divergência ao vivo',itens:[
+    'Lista "🔎 Divergências": cada endereço contado é comparado com o saldo do sistema NA HORA da contagem (saldo de hoje menos o que movimentou depois, pelo Kardex), e não mais com a base velha da coletora. Peça achada em outro endereço abate a falta.',
+    'Situação do endereço: 🔒 fechado (bateu e sem peça de fora), 🔎 com divergência, 📦 com peça de fora, ⏳ aguardando conferência. A conferência roda de madrugada, junto com a base do dia.',
+    'Cada divergência tem o valor a custo, a curva de giro (ABC) e a última venda; a lista vem pelo giro (curva A primeiro) e, dentro da curva, do maior valor para o menor.',
+    'Correção: endereços da coluna E (02E02, 03E10…) eram lidos pela planilha como número (200, 30000000000) e ficavam fora da cobertura. Agora entram no endereço certo.']},
+  {data:'12/11/26',area:'Backend',ver:'@18',itens:[
+    'Recebe do bot as divergências por endereço (upload_divergencias) e entrega as peças de cada endereço para a conferência.']},
   {data:'12/11/26',area:'Dashboard',ver:'Meta: vale a 1ª contagem',itens:[
     'Para a meta vale só a 1ª contagem de cada endereço. A 2ª e a 3ª (recontagem onde deu divergência) são controle: não somam na meta nem mudam a semana em que o endereço foi contado.',
     'Lista "🔁 Endereços recontados": quais tiveram mais de uma contagem, quantas, a data da 1ª e da última.']},
