@@ -52,6 +52,14 @@
   .rodadas label{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(42,46,66,.4);font-size:13px;cursor:pointer}
   details>summary{cursor:pointer;padding:6px 0;font-size:13px}
   #msg{display:none;margin-bottom:10px}
+  .barra{height:14px;border-radius:7px;background:var(--bd);overflow:hidden;margin:8px 0 4px}
+  .barra i{display:block;height:100%;background:var(--gn);border-radius:7px}
+  .grade{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+  .cel{border:1px solid var(--bd);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;background:var(--bg);text-align:center;min-width:58px;font-variant-numeric:tabular-nums}
+  .cel b{display:block;font-size:13px}
+  .cel.c-ok{border-color:var(--gn);background:rgba(45,198,83,.14)}.cel.c-pa{border-color:var(--yl);background:rgba(255,209,102,.10)}
+  .cel.c-sel{outline:2px solid var(--bl)}
+  .est{font-size:12px;color:var(--tx2);font-weight:700;margin-top:8px}
   @media(max-width:700px){body{padding:12px}td,th{padding:5px 5px;font-size:12px}.kpi b{font-size:19px}}
 </style>
 </head>
@@ -120,7 +128,7 @@ function testar(s){
 }
 function carregar(){
   aviso('⏳ Recarregando…');
-  mapa=null;
+  mapa=null;endDados=null;
   api({action:'getData'}).then(function(j){aviso('');if(j.ok){contagens=j.contagens||[];renderTudo()}else aviso('❌ '+esc(j.erro||'falha'),'av')})
   .catch(function(){aviso('❌ Falha ao falar com o backend.','av')});
 }
@@ -145,7 +153,7 @@ function renderTabs(){
   var h='';
   CATS.forEach(function(c){
     var n=contsDe(c.id).length;
-    if(!n&&c.id!=='capacetes'&&abaAtual!==c.id)return;
+    if(!n&&c.id!=='capacetes'&&c.id!=='locacao'&&abaAtual!==c.id)return;
     h+='<div class="tab'+(abaAtual===c.id?' ativa':'')+'" onclick="mudarAba(\''+c.id+'\')">'+c.ic+' '+c.rot+'<span class="n">'+n+'</span></div>';
   });
   h+='<span class="sep"></span>';
@@ -156,7 +164,7 @@ function mudarAba(id){abaAtual=id;filtroQuem='';try{localStorage.setItem(TABK,id
 function renderAba(){
   var el=document.getElementById('conteudo');
   if(abaAtual==='capacetes'){el.innerHTML=htmlCapacetes();iniciarCapacetes();return}
-  if(acharCat(abaAtual)){el.innerHTML=htmlCategoria(acharCat(abaAtual));return}
+  if(acharCat(abaAtual)){el.innerHTML=htmlCategoria(acharCat(abaAtual));if(abaAtual==='locacao')iniciarCobertura();return}
   if(abaAtual==='parado'){el.innerHTML=HTML_PARADO;carregarEstoque(renderGarimpo);return}
   if(abaAtual==='bases'){el.innerHTML=HTML_BASES;document.getElementById('inpPor').value=(function(){try{return localStorage.getItem('inv_dash_por')||''}catch(e){return ''}})();renderBases();return}
   if(abaAtual==='versoes'){el.innerHTML='<div class="card"><p class="sub">O que mudou em cada atualização — dashboard, backend e coletoras. A versão do app aparece na tela inicial da coletora.</p><div id="versoesArea"></div></div>';renderVersoes();return}
@@ -227,6 +235,7 @@ function htmlCategoria(cat){
     '<div class="kpi"><b>'+fin+'</b><span>finalizadas</span></div>'+
     '<div class="kpi"><b>'+fmtN(it)+'</b><span>itens nas contagens</span></div>'+
     '<div class="kpi"><b style="color:'+(dv?'var(--dg)':'var(--gn)')+'">'+fmtN(dv)+'</b><span>divergências × base</span></div></div>'+
+    (cat.id==='locacao'?'<div class="card" id="cobCard"><div class="vazio">Carregando a cobertura…</div></div>':'')+
     htmlPares(lista)+
     '<div class="card"><div class="linha entre"><h2>'+cat.ic+' Contagens — '+cat.rot+'</h2><div class="linha" style="margin:0">'+
       '<button class="btn" onclick="cruzarMarcadas()">Cruzar marcadas</button>'+
@@ -235,6 +244,109 @@ function htmlCategoria(cat){
       chipsQuem(lista)+tabelaContagens(lista,{chk:true})+'</div>'+
     '<div class="card" id="anaCard" style="display:none"></div>'+
     '<div class="card" id="cardDetalhe" style="display:none"></div>';
+}
+
+// ===== LOCAÇÃO: COBERTURA (quanto do estoque já foi contado, por endereço) =====
+// Universo = endereços com saldo (sobe do estoque_diario); contado = mapa
+// persistente do backend (contagem mais recente de cada endereço), que NÃO some
+// ao encerrar o ciclo. Contar o endereço já inclui organizar, limpar e levar a
+// peça estranha ao lugar certo — por isso a meta é em ENDEREÇOS, não em acurácia.
+var endDados=null,cobSel='';
+var RE_END=/^\d{2}[A-Z]\d{2}[A-Z]?$/;
+function iniciarCobertura(){
+  if(endDados){renderCobertura();return}
+  api({action:'getEnderecos'}).then(function(j){endDados=j;renderCobertura()})
+  .catch(function(){var c=document.getElementById('cobCard');if(c)c.innerHTML='<div class="vazio">Falha ao carregar a cobertura.</div>'});
+}
+function cobCalc(){
+  var uni={},fora=[],cont={},d=endDados;
+  (d.universo||[]).forEach(function(u){var l=String(u.loc).toUpperCase();if(RE_END.test(l))uni[l]=u;else fora.push(u)});
+  (d.contados||[]).forEach(function(c){cont[String(c.loc).toUpperCase()]=c});
+  var locs=Object.keys(uni).sort(),feitos=locs.filter(function(l){return cont[l]});
+  function soma(ls,k){return ls.reduce(function(a,l){return a+(Number(uni[l][k])||0)},0)}
+  // ritmo: endereços do universo cuja contagem vigente caiu nos últimos 7 / 28 dias
+  var agora=Date.now(),DIA=864e5,n7=0,n28=0;
+  feitos.forEach(function(l){var t=agora-new Date(cont[l].recebido_em).getTime();if(t<=7*DIA)n7++;if(t<=28*DIA)n28++});
+  var porSem=n28/4,faltam=locs.length-feitos.length;
+  var cols={};
+  locs.forEach(function(l){var k=l.substring(0,3);cols[k]=cols[k]||{k:k,tot:0,ok:0,locs:[]};cols[k].tot++;if(cont[l])cols[k].ok++;cols[k].locs.push(l)});
+  var ext=[];
+  (d.contados||[]).forEach(function(c){(c.ext||[]).forEach(function(e){ext.push({codigo:e.codigo,descricao:e.descricao,qtd:e.qtd,achado:c.loc,certo:e.loc_certo,quem:c.conferente,quando:c.recebido_em})})});
+  ext.sort(function(a,b){return String(a.achado).localeCompare(String(b.achado))});
+  return {uni:uni,cont:cont,locs:locs,feitos:feitos,faltam:faltam,codTot:soma(locs,'cod'),codOk:soma(feitos,'cod'),
+    n7:n7,porSem:porSem,previsao:(porSem>0&&faltam>0)?new Date(agora+faltam/porSem*7*DIA):null,
+    cols:cols,ext:ext,comExt:(d.contados||[]).filter(function(c){return (c.ext||[]).length}).length,
+    fora:fora.sort(function(a,b){return (b.cod||0)-(a.cod||0)}),
+    semCad:Object.keys(cont).filter(function(l){return !uni[l]}).sort()};
+}
+function renderCobertura(){
+  var card=document.getElementById('cobCard');if(!card)return;
+  var d=endDados||{};
+  if(!d.ok){card.innerHTML='<h2>📍 Cobertura da contagem por locação</h2><div class="nota av">O backend ainda não tem o mapa dos endereços ('+esc(d.erro||'sem resposta')+'). Publique a versão nova do backend.</div>';return}
+  var r=cobCalc(),nT=r.locs.length,nF=r.feitos.length,p=nT?100*nF/nT:0;
+  var h='<div class="linha entre"><h2>📍 Cobertura da contagem por locação</h2><button class="btn gn" onclick="exportarCobertura()">⬇ Excel do que falta</button></div>';
+  if(!nT){
+    card.innerHTML=h+'<div class="nota av">Ainda não há o universo de endereços (ele sobe sozinho com a base do dia, às 5h). Já contados no mapa: <b>'+(d.contados||[]).length+'</b> endereços.</div>';return}
+  h+='<p class="sub">Endereço contado = contado, organizado, limpo e com as peças no lugar. Vale a contagem mais recente de cada endereço; encerrar o ciclo NÃO zera este painel.'+
+    (d.meta?' Universo: endereços com saldo na Listagem de '+fmtData(d.meta.gerado_em)+'.':'')+'</p>'+
+    '<div class="barra"><i style="width:'+p.toFixed(1)+'%"></i></div>'+
+    '<div class="kpis" style="margin-top:10px">'+
+    '<div class="kpi"><b>'+pct(p)+'</b><span>dos endereços contados</span><small>'+fmtN(nF)+' de '+fmtN(nT)+' · faltam '+fmtN(r.faltam)+'</small></div>'+
+    '<div class="kpi"><b>'+pct(r.codTot?100*r.codOk/r.codTot:0)+'</b><span>dos códigos</span><small>'+fmtN(r.codOk)+' de '+fmtN(r.codTot)+'</small></div>'+
+    '<div class="kpi"><b>'+r.n7+'</b><span>endereços nos últimos 7 dias</span><small>média de 4 semanas: '+r.porSem.toLocaleString('pt-BR',{maximumFractionDigits:1})+'/semana</small></div>'+
+    '<div class="kpi"><b>'+(r.faltam?(r.previsao?r.previsao.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—'):'🎉')+'</b><span>previsão de término</span><small>'+(r.faltam?(r.previsao?'no ritmo das últimas 4 semanas':'sem contagem nas últimas 4 semanas'):'todos os endereços contados')+'</small></div>'+
+    '<div class="kpi"><b style="color:'+(r.ext.length?'var(--or)':'var(--gn)')+'">'+fmtN(r.ext.length)+'</b><span>peças fora do lugar</span><small>em '+r.comExt+' endereços</small></div></div>';
+  // grade estante → coluna
+  h+='<p class="sub" style="margin-bottom:0">Por estante e coluna (contados/total). Toque para ver os endereços.</p>';
+  var ests={};Object.keys(r.cols).sort().forEach(function(k){(ests[k.substring(0,2)]=ests[k.substring(0,2)]||[]).push(r.cols[k])});
+  Object.keys(ests).sort().forEach(function(e){
+    var t=0,o=0;ests[e].forEach(function(c){t+=c.tot;o+=c.ok});
+    h+='<div class="est">Estante '+esc(e)+' <span class="sub" style="display:inline;font-weight:400">'+o+'/'+t+'</span></div><div class="grade">';
+    ests[e].forEach(function(c){h+='<div class="cel'+(c.ok===c.tot?' c-ok':c.ok?' c-pa':'')+(cobSel===c.k?' c-sel':'')+'" onclick="cobVer(\''+c.k+'\')"><b>'+esc(c.k)+'</b>'+c.ok+'/'+c.tot+'</div>'});
+    h+='</div>';
+  });
+  h+='<div id="cobVer">'+(cobSel&&r.cols[cobSel]?htmlCobCol(r,r.cols[cobSel]):'')+'</div>';
+  // peças fora do lugar
+  h+='<details style="margin-top:10px"><summary><b>📦 Peças fora do lugar</b> ('+r.ext.length+') — achadas num endereço, cadastradas em outro</summary>';
+  if(!r.ext.length)h+='<div class="vazio">Nenhuma. 🎉</div>';
+  else{h+='<p class="sub">Levar ao lugar certo ou corrigir a Localização no cadastro. Sai da lista quando o endereço for contado de novo sem ela.</p><div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Qtd</th><th>Achada em</th><th>Cadastro diz</th><th>Quem</th><th>Quando</th></tr>';
+    r.ext.slice(0,300).forEach(function(e){h+='<tr><td class="mono">'+esc(e.codigo)+'</td><td>'+esc(e.descricao)+'</td><td><b>'+esc(e.qtd)+'</b></td><td>'+esc(e.achado)+'</td><td>'+esc(e.certo||'—')+'</td><td>'+esc(e.quem)+'</td><td style="white-space:nowrap">'+fmtData(e.quando)+'</td></tr>'});
+    h+='</table></div>'+(r.ext.length>300?'<p class="sub">mostrando 300 de '+r.ext.length+' — o Excel traz todas</p>':'')}
+  h+='</details>';
+  // estoque sem endereço padrão: não entra na meta por endereço
+  var fc=0,fp=0;r.fora.forEach(function(f){fc+=Number(f.cod)||0;fp+=Number(f.pc)||0});
+  h+='<details><summary><b>🚫 Estoque sem endereço</b> ('+fmtN(fc)+' códigos · '+fmtN(fp)+' peças) — fora da meta acima</summary>'+
+    '<p class="sub">Peças com saldo cuja Localização não é um endereço (SEM LOCAL, LOTE, DEMOS…). A contagem por locação não passa por elas: precisam ganhar endereço.</p>'+
+    (r.fora.length?'<div class="rolar"><table><tr><th>Localização no cadastro</th><th>Códigos</th><th>Peças</th></tr>'+r.fora.map(function(f){return '<tr><td>'+esc(f.loc)+'</td><td>'+fmtN(f.cod)+'</td><td>'+fmtN(f.pc)+'</td></tr>'}).join('')+'</table></div>':'<div class="vazio">Nenhum. 🎉</div>')+'</details>';
+  if(r.semCad.length)h+='<details><summary><b>❔ Contados sem peça cadastrada ali</b> ('+r.semCad.length+')</summary><p class="sub">Endereços que receberam contagem mas onde o cadastro não aponta nenhuma peça com saldo: '+esc(r.semCad.join(', '))+'</p></details>';
+  card.innerHTML=h;
+}
+function htmlCobCol(r,c){
+  var h='<div class="card" style="margin:6px 0 0;background:var(--bg)"><div class="linha entre"><b>'+esc(c.k)+' — '+c.ok+' de '+c.tot+' endereços</b><button class="btn sec pq" onclick="cobVer(\'\')">✕</button></div>'+
+    '<div class="rolar"><table><tr><th>Endereço</th><th>Códigos no cadastro</th><th>Peças</th><th>Situação</th><th>Quem</th><th>Quando</th><th>Fora do lugar</th></tr>';
+  c.locs.forEach(function(l){
+    var u=r.uni[l],k=r.cont[l];
+    h+='<tr><td class="mono"><b>'+esc(l)+'</b></td><td>'+fmtN(u.cod)+'</td><td>'+fmtN(u.pc)+'</td>'+
+      (k?'<td><span class="badge b-gn">contado</span></td><td>'+esc(k.conferente)+'</td><td style="white-space:nowrap">'+fmtData(k.recebido_em)+'</td><td>'+((k.ext||[]).length?'<span class="badge b-or">'+k.ext.length+'</span>':'')+'</td>'
+        :'<td colspan="4"><span class="badge b-or">falta contar</span></td>')+'</tr>';
+  });
+  return h+'</table></div></div>';
+}
+function cobVer(k){cobSel=(cobSel===k?'':k);renderCobertura();var v=document.getElementById('cobVer');if(cobSel&&v)v.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function exportarCobertura(){
+  if(!endDados||!endDados.ok)return;
+  var r=cobCalc(),falta=[],feito=[];
+  r.locs.forEach(function(l){
+    var u=r.uni[l],k=r.cont[l];
+    if(k)feito.push({'Endereço':l,'Códigos no cadastro':u.cod,'Peças':u.pc,'Quem contou':k.conferente,'Contado em':fmtData(k.recebido_em),'Códigos bipados':k.n_codigos,'Fora do lugar':(k.ext||[]).length});
+    else falta.push({'Endereço':l,'Coluna':l.substring(0,3),'Códigos no cadastro':u.cod,'Peças':u.pc});
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(falta),'Falta contar');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(feito),'Contados');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.ext.map(function(e){return {'Código':e.codigo,'Descrição':e.descricao,'Qtd':e.qtd,'Achada em':e.achado,'Cadastro diz':e.certo,'Quem':e.quem,'Quando':fmtData(e.quando)}})),'Fora do lugar');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.fora.map(function(f){return {'Localização':f.loc,'Códigos':f.cod,'Peças':f.pc}})),'Sem endereço');
+  XLSX.writeFile(wb,'Cobertura-locacao-'+new Date().toISOString().substring(0,10)+'.xlsx');
 }
 
 // ===== DETALHE DE UMA CONTAGEM =====
@@ -668,7 +780,7 @@ function encerrarCiclo(catId){
     else aviso('❌ Falha: '+esc(j.erro||'?')+' — nada foi apagado.','av');
   }).catch(function(){aviso('❌ Falha ao falar com o backend — nada foi apagado. Tente de novo.','av')});
 }
-function carregarSilencioso(){mapa=null;api({action:'getData'}).then(function(j){if(j.ok){contagens=j.contagens||[];renderTudo()}})}
+function carregarSilencioso(){mapa=null;endDados=null;api({action:'getData'}).then(function(j){if(j.ok){contagens=j.contagens||[];renderTudo()}})}
 function htmlArquivo(){
   return '<div class="card"><h2>🗄️ Arquivar e limpar TUDO</h2><p class="sub">Salva uma cópia completa da planilha no Drive e apaga as contagens de TODAS as categorias. As bases, o estoque do dia e o mapa das prateleiras ficam. Para encerrar só uma categoria, use o botão 💾 dentro da aba dela.</p>'+
     '<button class="btn dg" onclick="limparTudo()">💾 Arquivar e limpar todas as contagens</button></div>';
@@ -876,6 +988,16 @@ function uploadBase(tipo){
 
 // Changelog curado (dashboard + coletoras). Mais novo primeiro.
 var CHANGELOG=[
+  {data:'12/11/26',area:'Dashboard',ver:'Cobertura da locação',itens:[
+    'Aba 📍 Locação ganhou o painel de cobertura: quantos endereços já foram contados, de quantos existem, o ritmo da semana e a previsão de término. A meta é por endereço.',
+    'Grade por estante e coluna (contados/total): toque numa coluna para ver o que falta. "⬇ Excel do que falta" é a lista de trabalho.',
+    'Lista de peças fora do lugar (achadas num endereço, cadastradas em outro) e bloco do estoque sem endereço (SEM LOCAL, LOTE, DEMOS), que fica fora da meta.',
+    'O painel NÃO zera ao encerrar o ciclo: o backend guarda a contagem mais recente de cada endereço.']},
+  {data:'12/11/26',area:'Backend',ver:'@15',itens:[
+    'Mapa persistente dos endereços (como o das prateleiras) e universo de endereços, que sobe sozinho com a base do dia.']},
+  {data:'12/11/26',area:'Coletoras',ver:'Netum v32 / Eyoyo v39',itens:[
+    'Contagem CEGA na locação (e na contagem por tipo): a tela de contagem não mostra mais o saldo do sistema nem se a quantidade bateu. Quem conta registra o que está na prateleira; a comparação aparece só no relatório, depois de concluir.',
+    'Capacetes continuam como estavam. Atualize o app: feche e abra de novo com internet.']},
   {data:'30/10/26',area:'Coletoras',ver:'Netum v31 / Eyoyo v38',itens:[
     'TODA contagem registra quem está contando — inclusive a Contagem Livre (e a Conferência no iPhone), que antes não pedia. Lista fixa: João, Jullya, Leandro, Luiz, Patrícia e Victor.',
     'O aparelho lembra o último nome escolhido e já deixa pré-selecionado; basta confirmar. Atualize o app: feche e abra de novo com internet.']},

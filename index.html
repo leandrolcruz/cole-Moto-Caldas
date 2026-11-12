@@ -207,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v31</b> (30/10/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v32</b> (12/11/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -1507,10 +1507,13 @@ function voltarLocSel(){saveDB();cur=null;iniciarSelLoc()}
 function hideLocAlerts(){document.getElementById('locAlertWarn').classList.remove('show');document.getElementById('locAlertErr').classList.remove('show');document.getElementById('locAlertInfo').classList.remove('show')}
 function showLocAlert(type,txt){hideLocAlerts();var id=type==='warn'?'locAlertWarn':type==='err'?'locAlertErr':'locAlertInfo';var tid=id+'Txt';document.getElementById(tid).textContent=txt;document.getElementById(id).classList.add('show');setTimeout(hideLocAlerts,4000)}
 
+function contagemCega(c){return !c.porCapacete&&!c.porPrateleira}
 function renderLocCont(codDestaque){
   var c=db.c[cur],total=0,ok=0,pend=0,extra=0;
   var el=document.getElementById('locContItems');
-  var h='<div class="item-row item-hdr"><span class="loc-item-status"></span><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span><span class="item-saldo">Sist.</span><span class="item-qty">Cont.</span></div>';
+  // Contagem CEGA (locação e tipo): quem conta não vê o saldo nem se bateu; a comparação fica no relatório final
+  var cega=contagemCega(c);
+  var h='<div class="item-row item-hdr"><span class="loc-item-status"></span><span class="item-code">Código</span><span class="item-desc">Descrição</span><span class="item-loc">Local</span>'+(cega?'':'<span class="item-saldo">Sist.</span>')+'<span class="item-qty">Cont.</span></div>';
   // Normais primeiro, extras depois
   var normais=[],extras=[];
   for(var i=0;i<c.ordem.length;i++){var cod=c.ordem[i];if(c.itens[cod].extra)extras.push(cod);else normais.push(cod)}
@@ -1519,11 +1522,11 @@ function renderLocCont(codDestaque){
     var cod=ordered[i],it=c.itens[cod];total++;
     var contado=it.qtd!==null,isExtra=it.extra;
     if(isExtra)extra++;else if(contado)ok++;else pend++;
-    var icon=contado?(it.qtd===it.saldo?'✅':'⚠️'):'⬜';if(isExtra)icon='📦';
+    var icon=contado?(cega?'☑️':it.qtd===it.saldo?'✅':'⚠️'):'⬜';if(isExtra)icon='📦';
     var qDisp=contado?it.qtd:'-';
-    var qColor=!contado?'color:var(--tx3)':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
+    var qColor=!contado?'color:var(--tx3)':cega?'font-weight:700':it.qtd===it.saldo?'color:var(--gn)':it.qtd>it.saldo?'color:var(--bl)':'color:var(--dg)';
     if(codDestaque)c._ultimo=codDestaque;var flash=(cod===c._ultimo?' item-last':'')+(cod===codDestaque?' item-flash':'');
-    h+='<div class="item-row'+flash+'" id="rowl-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="loc-item-status">'+icon+'</span><span class="item-code">'+cod+(isExtra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span><span class="item-saldo">'+it.saldo+'</span><span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
+    h+='<div class="item-row'+flash+'" id="rowl-'+cod.replace(/[^a-zA-Z0-9]/g,'_')+'" onclick="verDescPeca(\''+cod.replace(/'/g,"\\'")+'\')" style="cursor:pointer"><span class="loc-item-status">'+icon+'</span><span class="item-code">'+cod+(isExtra?' <span style="color:var(--or);font-size:9px">EXT</span>':'')+'</span><span class="item-desc">'+(it.desc||'')+'</span><span class="item-loc">'+(it.loc||'')+'</span>'+(cega?'':'<span class="item-saldo">'+it.saldo+'</span>')+'<span class="item-qty" style="'+qColor+'">'+qDisp+'</span></div>';
   }
   el.innerHTML=h;
   document.getElementById('slcTotal').textContent=total;document.getElementById('slcOk').textContent=ok;document.getElementById('slcPend').textContent=pend;
@@ -1628,7 +1631,7 @@ function editLocQtd(cod){
   var c=db.c[cur];if(!c||!c.itens[cod])return;
   document.getElementById('modLocQtdTitle').textContent=cod;
   document.getElementById('modLocQtdDesc').textContent=c.itens[cod].extra?'EXTRA (de '+c.itens[cod].loc+')':'Locação: '+c.locacao;
-  document.getElementById('modLocQtdInfo').textContent='Saldo: '+c.itens[cod].saldo;
+  document.getElementById('modLocQtdInfo').textContent=contagemCega(c)?'':'Saldo: '+c.itens[cod].saldo;
   document.getElementById('modLocQtdInput').value=c.itens[cod].qtd!==null?c.itens[cod].qtd:'';
   tmpOutraCod=cod;openM('modLocQtd');setTimeout(function(){document.getElementById('modLocQtdInput').focus()},200);
 }
