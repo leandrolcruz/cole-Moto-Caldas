@@ -54,6 +54,17 @@
   #msg{display:none;margin-bottom:10px}
   .barra{height:14px;border-radius:7px;background:var(--bd);overflow:hidden;margin:8px 0 4px}
   .barra i{display:block;height:100%;background:var(--gn);border-radius:7px}
+  .sems{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px}
+  .sem{flex:1;min-width:64px;text-align:center;font-size:11px;color:var(--tx3)}
+  .sem .n{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+  .sem .tr{position:relative;height:120px;margin:4px 0;border:1px solid var(--bd);border-radius:6px;background:var(--card);overflow:hidden}
+  .sem .tr i{position:absolute;left:0;right:0;bottom:0;background:var(--tx3)}
+  .sem .tr u{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--tx)}
+  .sem.s-ok .tr i{background:var(--gn)}.sem.s-nao .tr i{background:var(--dg)}.sem.s-at .tr i{background:var(--bl)}
+  .sem.s-at .tr{border-color:var(--bl)}.sem.s-fu{opacity:.6}
+  .sem b{display:block;color:var(--tx)}.sem small{display:block;font-size:10px}
+  .rc{display:inline-block;border:1px solid var(--bd);border-radius:5px;padding:1px 6px;margin:1px 0;font-size:12px;white-space:nowrap}
+  .rc.ok{border-color:var(--gn);color:var(--gn)}
   .grade{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
   .cel{border:1px solid var(--bd);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;background:var(--bg);text-align:center;min-width:58px;font-variant-numeric:tabular-nums}
   .cel b{display:block;font-size:13px}
@@ -88,6 +99,7 @@
   <div id="conteudo"></div>
 </div>
 
+<script src="meta-locacao.js"></script>
 <script>
 var API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
 var SK='inv_dash_senha',TABK='inv_dash_aba';
@@ -258,6 +270,7 @@ function iniciarCobertura(){
   api({action:'getEnderecos'}).then(function(j){endDados=j;renderCobertura()})
   .catch(function(){var c=document.getElementById('cobCard');if(c)c.innerHTML='<div class="vazio">Falha ao carregar a cobertura.</div>'});
 }
+// A meta de 10 semanas (plano, semanas, roteiro) fica em meta-locacao.js, compartilhado com a tela da equipe (meta.html).
 function cobCalc(){
   var uni={},fora=[],cont={},d=endDados;
   (d.universo||[]).forEach(function(u){var l=String(u.loc).toUpperCase();if(RE_END.test(l))uni[l]=u;else fora.push(u)});
@@ -284,7 +297,7 @@ function renderCobertura(){
   var d=endDados||{};
   if(!d.ok){card.innerHTML='<h2>📍 Cobertura da contagem por locação</h2><div class="nota av">O backend ainda não tem o mapa dos endereços ('+esc(d.erro||'sem resposta')+'). Publique a versão nova do backend.</div>';return}
   var r=cobCalc(),nT=r.locs.length,nF=r.feitos.length,p=nT?100*nF/nT:0;
-  var h='<div class="linha entre"><h2>📍 Cobertura da contagem por locação</h2><button class="btn gn" onclick="exportarCobertura()">⬇ Excel do que falta</button></div>';
+  var h='<div class="linha entre"><h2>📍 Cobertura da contagem por locação</h2><span><a class="btn sec" href="meta.html" target="_blank" style="text-decoration:none">Tela da equipe ↗</a> <button class="btn gn" onclick="exportarCobertura()">⬇ Excel do que falta</button></span></div>';
   if(!nT){
     card.innerHTML=h+'<div class="nota av">Ainda não há o universo de endereços (ele sobe sozinho com a base do dia, às 5h). Já contados no mapa: <b>'+(d.contados||[]).length+'</b> endereços.</div>';return}
   h+='<p class="sub">Endereço contado = contado, organizado, limpo e com as peças no lugar. Vale a contagem mais recente de cada endereço; encerrar o ciclo NÃO zera este painel.'+
@@ -295,7 +308,8 @@ function renderCobertura(){
     '<div class="kpi"><b>'+pct(r.codTot?100*r.codOk/r.codTot:0)+'</b><span>dos códigos</span><small>'+fmtN(r.codOk)+' de '+fmtN(r.codTot)+'</small></div>'+
     '<div class="kpi"><b>'+r.n7+'</b><span>endereços nos últimos 7 dias</span><small>média de 4 semanas: '+r.porSem.toLocaleString('pt-BR',{maximumFractionDigits:1})+'/semana</small></div>'+
     '<div class="kpi"><b>'+(r.faltam?(r.previsao?r.previsao.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—'):'🎉')+'</b><span>previsão de término</span><small>'+(r.faltam?(r.previsao?'no ritmo das últimas 4 semanas':'sem contagem nas últimas 4 semanas'):'todos os endereços contados')+'</small></div>'+
-    '<div class="kpi"><b style="color:'+(r.ext.length?'var(--or)':'var(--gn)')+'">'+fmtN(r.ext.length)+'</b><span>peças fora do lugar</span><small>em '+r.comExt+' endereços</small></div></div>';
+    '<div class="kpi"><b style="color:'+(r.ext.length?'var(--or)':'var(--gn)')+'">'+fmtN(r.ext.length)+'</b><span>códigos fora do lugar</span><small>em '+r.comExt+' endereços</small></div></div>'+htmlCobMeta(r)+
+    (r.faltam?'<details style="margin-bottom:10px"><summary><b>🗺️ Roteiro por semana</b> — que colunas contar em cada semana</summary>'+htmlCobRoteiro(r)+'</details>':'');
   // grade estante → coluna
   h+='<p class="sub" style="margin-bottom:0">Por estante e coluna (contados/total). Toque para ver os endereços.</p>';
   var ests={};Object.keys(r.cols).sort().forEach(function(k){(ests[k.substring(0,2)]=ests[k.substring(0,2)]||[]).push(r.cols[k])});
@@ -988,6 +1002,13 @@ function uploadBase(tipo){
 
 // Changelog curado (dashboard + coletoras). Mais novo primeiro.
 var CHANGELOG=[
+  {data:'12/11/26',area:'Dashboard',ver:'Meta da locação',itens:[
+    'Meta de 10 semanas no painel de cobertura: todos os endereços contados até 22/01/27 (de 16/11 em diante). Mostra quantos endereços por dia útil faltam para fechar, a meta da semana e se a contagem está em dia ou atrasada em relação ao plano.',
+    'Gráfico "Meta por semana": uma barra por semana, que sobe conforme os endereços são contados, com a meta da semana tracejada e o acumulado contra o plano embaixo. Verde = bateu a meta; vermelho = semana fechada abaixo; azul = semana em andamento.',
+    '"🗺️ Roteiro por semana": a fila dos endereços que faltam, na ordem das estantes, dividida pelas 10 semanas — que colunas contar em cada uma.',
+    'Tela da equipe (leandrolcruz.github.io/cole-Moto-Caldas/meta.html), sem senha: o percentual, o gráfico das semanas e o roteiro da semana com os endereços que faltam em cada coluna. Mostra só endereço e data — sem peça, quantidade, custo ou nome. Atualiza sozinha; dá para imprimir.']},
+  {data:'12/11/26',area:'Backend',ver:'@16',itens:[
+    'Leitura getCobertura para a tela da equipe (token das coletoras): só a lista de endereços e a data da contagem de cada um.']},
   {data:'12/11/26',area:'Dashboard',ver:'Cobertura da locação',itens:[
     'Aba 📍 Locação ganhou o painel de cobertura: quantos endereços já foram contados, de quantos existem, o ritmo da semana e a previsão de término. A meta é por endereço.',
     'Grade por estante e coluna (contados/total): toque numa coluna para ver o que falta. "⬇ Excel do que falta" é a lista de trabalho.',

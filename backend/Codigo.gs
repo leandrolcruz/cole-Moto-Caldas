@@ -19,6 +19,7 @@
  *   getData (admin)                           → lista de contagens (com categoria)
  *   getItens / getItensLote (admin)           → itens de uma / várias contagens
  *   getMapa (coletora)                        → mapa persistente das prateleiras
+ *   getCobertura (coletora)                   → tela da equipe: endereços e data da contagem
  *   getEnderecos (admin)                      → cobertura da locação: universo de
  *                                               endereços + mapa persistente do contado
  *   upload_enderecos {enderecos} (admin)      → universo de endereços (estoque_diario)
@@ -63,7 +64,7 @@ var CAB_END_UNI = ['loc', 'n_codigos', 'n_pecas'];
 var ABA_END_META = 'enderecos_meta';
 // Ações só de leitura: rodam sem o lock (não disputam com o envio das coletoras).
 var LEITURAS = ['ping', 'getMapa', 'getBase', 'getBases', 'getBasesHist', 'getEstoque',
-                'getData', 'getItens', 'getItensLote', 'migrarHist', 'getEnderecos'];
+                'getData', 'getItens', 'getItensLote', 'migrarHist', 'getEnderecos', 'getCobertura'];
 var CAB_ITENS = ['contagem_id', 'codigo', 'descricao', 'local', 'saldo',
                  'contado', 'extra', 'tamanho', 'cor'];
 // Códigos do fabricante (fora do catálogo carregado) — só auditoria, não contam
@@ -596,6 +597,19 @@ function _ler(p) {
       try { cache.put('mapa_prateleiras', hit, 180); } catch (err) {}
     }
     return ContentService.createTextOutput(hit).setMimeType(ContentService.MimeType.JSON);
+  }
+  if (p.action === 'getCobertura') {
+    // Tela da equipe (meta da locação, pública): só o endereço e a data da contagem
+    // vigente — sem peça, quantidade nem nome. Cache 3 min; &nocache=1 força.
+    if (!_ehColetora(p)) return _json({ok: false, erro: 'não autorizado'});
+    var cacheC = CacheService.getScriptCache(), hitC = p.nocache ? null : cacheC.get('cobertura_enderecos');
+    if (!hitC) {
+      hitC = JSON.stringify({ok: true,
+        universo: _universoEnderecos().map(function (u) { return u.loc; }),
+        contados: _endMapa().map(function (c) { return {loc: c.loc, recebido_em: c.recebido_em}; })});
+      try { cacheC.put('cobertura_enderecos', hitC, 180); } catch (err) {}
+    }
+    return ContentService.createTextOutput(hitC).setMimeType(ContentService.MimeType.JSON);
   }
   if (p.action === 'getBase') {
     if (!_ehColetora(p)) return _json({ok: false, erro: 'não autorizado'});
