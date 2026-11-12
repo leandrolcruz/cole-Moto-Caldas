@@ -277,9 +277,9 @@ function cobCalc(){
   (d.contados||[]).forEach(function(c){cont[String(c.loc).toUpperCase()]=c});
   var locs=Object.keys(uni).sort(),feitos=locs.filter(function(l){return cont[l]});
   function soma(ls,k){return ls.reduce(function(a,l){return a+(Number(uni[l][k])||0)},0)}
-  // ritmo: endereços do universo cuja contagem vigente caiu nos últimos 7 / 28 dias
+  // ritmo: endereços do universo contados PELA 1ª VEZ nos últimos 7 / 28 dias (recontagem não soma)
   var agora=Date.now(),DIA=864e5,n7=0,n28=0;
-  feitos.forEach(function(l){var t=agora-new Date(cont[l].recebido_em).getTime();if(t<=7*DIA)n7++;if(t<=28*DIA)n28++});
+  feitos.forEach(function(l){var t=agora-cobQuando(cont[l]);if(t<=7*DIA)n7++;if(t<=28*DIA)n28++});
   var porSem=n28/4,faltam=locs.length-feitos.length;
   var cols={};
   locs.forEach(function(l){var k=l.substring(0,3);cols[k]=cols[k]||{k:k,tot:0,ok:0,locs:[]};cols[k].tot++;if(cont[l])cols[k].ok++;cols[k].locs.push(l)});
@@ -290,6 +290,7 @@ function cobCalc(){
     n7:n7,porSem:porSem,previsao:(porSem>0&&faltam>0)?new Date(agora+faltam/porSem*7*DIA):null,
     cols:cols,ext:ext,comExt:(d.contados||[]).filter(function(c){return (c.ext||[]).length}).length,
     fora:fora.sort(function(a,b){return (b.cod||0)-(a.cod||0)}),
+    rec:(d.contados||[]).filter(function(c){return (c.contagens||1)>1}).sort(function(a,b){return String(a.loc).localeCompare(String(b.loc))}),
     semCad:Object.keys(cont).filter(function(l){return !uni[l]}).sort()};
 }
 function renderCobertura(){
@@ -300,7 +301,7 @@ function renderCobertura(){
   var h='<div class="linha entre"><h2>📍 Cobertura da contagem por locação</h2><span><a class="btn sec" href="meta.html" target="_blank" style="text-decoration:none">Tela da equipe ↗</a> <button class="btn gn" onclick="exportarCobertura()">⬇ Excel do que falta</button></span></div>';
   if(!nT){
     card.innerHTML=h+'<div class="nota av">Ainda não há o universo de endereços (ele sobe sozinho com a base do dia, às 5h). Já contados no mapa: <b>'+(d.contados||[]).length+'</b> endereços.</div>';return}
-  h+='<p class="sub">Endereço contado = contado, organizado, limpo e com as peças no lugar. Vale a contagem mais recente de cada endereço; encerrar o ciclo NÃO zera este painel.'+
+  h+='<p class="sub">Endereço contado = contado, organizado, limpo e com as peças no lugar. Vale a contagem mais recente de cada endereço; encerrar o ciclo NÃO zera este painel. Para a meta vale a 1ª contagem do endereço; recontagem é controle.'+
     (d.meta?' Universo: endereços com saldo na Listagem de '+fmtData(d.meta.gerado_em)+'.':'')+'</p>'+
     '<div class="barra"><i style="width:'+p.toFixed(1)+'%"></i></div>'+
     '<div class="kpis" style="margin-top:10px">'+
@@ -326,6 +327,13 @@ function renderCobertura(){
   else{h+='<p class="sub">Levar ao lugar certo ou corrigir a Localização no cadastro. Sai da lista quando o endereço for contado de novo sem ela.</p><div class="rolar"><table><tr><th>Código</th><th>Descrição</th><th>Qtd</th><th>Achada em</th><th>Cadastro diz</th><th>Quem</th><th>Quando</th></tr>';
     r.ext.slice(0,300).forEach(function(e){h+='<tr><td class="mono">'+esc(e.codigo)+'</td><td>'+esc(e.descricao)+'</td><td><b>'+esc(e.qtd)+'</b></td><td>'+esc(e.achado)+'</td><td>'+esc(e.certo||'—')+'</td><td>'+esc(e.quem)+'</td><td style="white-space:nowrap">'+fmtData(e.quando)+'</td></tr>'});
     h+='</table></div>'+(r.ext.length>300?'<p class="sub">mostrando 300 de '+r.ext.length+' — o Excel traz todas</p>':'')}
+  h+='</details>';
+  // recontagens: controle nosso, não somam na meta
+  h+='<details><summary><b>🔁 Endereços recontados</b> ('+r.rec.length+') — 2ª e 3ª contagem, fora da meta</summary>';
+  if(!r.rec.length)h+='<div class="vazio">Nenhum endereço foi contado mais de uma vez.</div>';
+  else{h+='<p class="sub">A meta conta só a 1ª contagem de cada endereço. Aqui ficam os que foram contados de novo; o painel mostra sempre a contagem mais recente.</p><div class="rolar"><table><tr><th>Endereço</th><th>Contagens</th><th>1ª contagem</th><th>Última</th><th>Quem (última)</th></tr>';
+    r.rec.forEach(function(c){h+='<tr><td><b>'+esc(c.loc)+'</b></td><td>'+esc(c.contagens)+'</td><td style="white-space:nowrap">'+fmtData(c.primeira_em)+'</td><td style="white-space:nowrap">'+fmtData(c.recebido_em)+'</td><td>'+esc(c.conferente)+'</td></tr>'});
+    h+='</table></div>'}
   h+='</details>';
   // estoque sem endereço padrão: não entra na meta por endereço
   var fc=0,fp=0;r.fora.forEach(function(f){fc+=Number(f.cod)||0;fp+=Number(f.pc)||0});
@@ -1007,6 +1015,11 @@ var CHANGELOG=[
     'Gráfico "Meta por semana": uma barra por semana, que sobe conforme os endereços são contados, com a meta da semana tracejada e o acumulado contra o plano embaixo. Verde = bateu a meta; vermelho = semana fechada abaixo; azul = semana em andamento.',
     '"🗺️ Roteiro por semana": a fila dos endereços que faltam, na ordem das estantes, dividida pelas 10 semanas — que colunas contar em cada uma.',
     'Tela da equipe (leandrolcruz.github.io/cole-Moto-Caldas/meta.html), sem senha: o percentual, o gráfico das semanas e o roteiro da semana com os endereços que faltam em cada coluna. Mostra só endereço e data — sem peça, quantidade, custo ou nome. Atualiza sozinha; dá para imprimir.']},
+  {data:'12/11/26',area:'Dashboard',ver:'Meta: vale a 1ª contagem',itens:[
+    'Para a meta vale só a 1ª contagem de cada endereço. A 2ª e a 3ª (recontagem onde deu divergência) são controle: não somam na meta nem mudam a semana em que o endereço foi contado.',
+    'Lista "🔁 Endereços recontados": quais tiveram mais de uma contagem, quantas, a data da 1ª e da última.']},
+  {data:'12/11/26',area:'Backend',ver:'@17',itens:[
+    'Registro persistente de cada contagem por endereço (enderecos_log): guarda a data da 1ª contagem e quantas o endereço já teve. Não zera ao encerrar o ciclo.']},
   {data:'12/11/26',area:'Backend',ver:'@16',itens:[
     'Leitura getCobertura para a tela da equipe (token das coletoras): só a lista de endereços e a data da contagem de cada um.']},
   {data:'12/11/26',area:'Dashboard',ver:'Cobertura da locação',itens:[

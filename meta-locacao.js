@@ -2,9 +2,11 @@
 // Compartilhado pelo dashboard (aba Locação) e pela tela da equipe (meta.html).
 // r = {locs:[endereços do universo, em ordem], feitos:[os já contados], cont:{loc:{recebido_em}}, faltam:n}
 // Feriados não contam como dia de contagem.
+// Para a meta vale a 1ª contagem de cada endereço (primeira_em); recontagem é controle e não muda a data.
 var META_COB={inicio:'2026-11-16',fim:'2027-01-22',feriados:['2026-11-20','2026-12-25','2027-01-01']};
 function cobDia(s){var p=s.split('-');return new Date(+p[0],p[1]-1,+p[2])}
 function cobIso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function cobQuando(c){return new Date(c.primeira_em||c.recebido_em).getTime()}
 function cobN(n){return Number(n).toLocaleString('pt-BR')}
 function cobDM(d){return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}
 // dias úteis (seg a sex, fora feriado) de a até b, inclusive
@@ -13,7 +15,7 @@ function cobUteis(a,b){var n=0,d=new Date(a.getFullYear(),a.getMonth(),a.getDate
 // dos endereços (é o roteiro). O ritmo é a fila dividida pelos dias úteis do período.
 function cobPlano(r){
   var m=META_COB,ini=cobDia(m.inicio),fim=cobDia(m.fim),t0=ini.getTime();
-  var fila=r.locs.filter(function(l){var c=r.cont[l];return !c||new Date(c.recebido_em).getTime()>=t0});
+  var fila=r.locs.filter(function(l){var c=r.cont[l];return !c||cobQuando(c)>=t0});
   var tot=cobUteis(ini,fim);
   return {ini:ini,fim:fim,fila:fila,base:r.locs.length-fila.length,tot:tot,porDia:tot?fila.length/tot:0};
 }
@@ -25,17 +27,16 @@ function cobMeta(r){
   var esperado=Math.min(nT,p.base+p.porDia*passados);
   var seg=new Date(hoje);seg.setDate(seg.getDate()-((seg.getDay()+6)%7));var sex=new Date(seg);sex.setDate(sex.getDate()+4);
   var a=seg<p.ini?p.ini:seg,b=sex>p.fim?p.fim:sex,nSem=0;
-  r.feitos.forEach(function(l){if(new Date(r.cont[l].recebido_em)>=seg)nSem++});
+  r.feitos.forEach(function(l){if(cobQuando(r.cont[l])>=seg.getTime())nSem++});
   var restam=hoje>p.fim?0:cobUteis(hoje<p.ini?p.ini:hoje,p.fim);
   return {ini:p.ini,fim:p.fim,antes:hoje<p.ini,depois:hoje>p.fim,porDia:p.porDia,esperado:esperado,saldo:nF-esperado,
     alvoSem:a<=b?Math.round(p.porDia*cobUteis(a,b)):0,nSem:nSem,restam:restam,precisa:restam?r.faltam/restam:0};
 }
 // A meta fatiada por semana: meta e contado de cada uma, o acumulado contra o plano e o
 // roteiro (rota = os endereços da fila que cabem àquela semana).
-// Vale a data da contagem vigente de cada endereço (endereço recontado passa para a semana da recontagem).
 function cobSemanas(r){
   var p=cobPlano(r),agora=Date.now(),nT=r.locs.length,out=[],ant=p.base;
-  var ts=r.feitos.map(function(l){return new Date(r.cont[l].recebido_em).getTime()});
+  var ts=r.feitos.map(function(l){return cobQuando(r.cont[l])});
   for(var k=0;;k++){
     var seg=new Date(p.ini);seg.setDate(seg.getDate()+7*k);if(seg>p.fim)break;
     var sex=new Date(seg);sex.setDate(sex.getDate()+4);if(sex>p.fim)sex=p.fim;

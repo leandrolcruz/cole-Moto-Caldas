@@ -57,6 +57,10 @@ var CAB_MAPA = ['loc', 'contagem_id', 'recebido_em', 'conferente', 'codigo', 'de
 var ABA_END = 'mapa_enderecos';
 var CAB_END = ['loc', 'contagem_id', 'recebido_em', 'conferente', 'codigo', 'descricao',
                'qtd', 'extra', 'loc_certo'];
+// uma linha por CONTAGEM de endereço (persistente): dá a data da 1ª contagem,
+// que é a que vale para a meta, e quantas vezes o endereço já foi contado
+var ABA_END_LOG = 'enderecos_log';
+var CAB_END_LOG = ['loc', 'contagem_id', 'recebido_em', 'conferente'];
 // Universo de endereços da loja (o estoque_diario sobe junto da base do dia):
 // é o denominador da cobertura.
 var ABA_END_UNI = 'enderecos_universo';
@@ -196,6 +200,7 @@ function _apagarContagemAdmin(body) {
   try { CacheService.getScriptCache().remove('mapa_prateleiras'); } catch (err) {}
   // idem no mapa dos endereços
   var ends = _endTirarContagem(String(body.id));
+  _endLogTirar(String(body.id));
   if (ends.length) {
     var resto = _endDeContagens();
     ends.forEach(function (l) { if (resto[l]) _endGravar(l, resto[l].id, resto[l].recebido_em, resto[l].conferente, resto[l].itens); });
@@ -292,8 +297,10 @@ function doPost(e) {
                    return {codigo: it.codigo || '', descricao: it.desc || '', qtd: it.qtd,
                            extra: !!it.extra, loc_certo: it.extra ? (it.loc || '') : ''};
                  }));
+      _endLogRegistrar(endereco, String(c.id), recebido, c.conferente || '');
     }
     try { CacheService.getScriptCache().remove('mapa_prateleiras'); } catch (err) {}
+    try { CacheService.getScriptCache().remove('cobertura_enderecos'); } catch (err) {}
     return _json({ok: true, itens: linhas.length, divergencias: divergencias,
                   fab: fab.length});
   } catch (err) {
@@ -606,7 +613,9 @@ function _ler(p) {
     if (!hitC) {
       hitC = JSON.stringify({ok: true,
         universo: _universoEnderecos().map(function (u) { return u.loc; }),
-        contados: _endMapa().map(function (c) { return {loc: c.loc, recebido_em: c.recebido_em}; })});
+        contados: _endMapa().map(function (c) {
+          return {loc: c.loc, recebido_em: c.recebido_em, primeira_em: c.primeira_em, contagens: c.contagens};
+        })});
       try { cacheC.put('cobertura_enderecos', hitC, 180); } catch (err) {}
     }
     return ContentService.createTextOutput(hitC).setMimeType(ContentService.MimeType.JSON);
@@ -901,6 +910,69 @@ function _endGravar(loc, contagemId, recebido, conferente, itens) {
   _endEscrever(sh, _endLinhas(loc, contagemId, recebido, conferente, itens));
   return true;
 }
+// ---- log das contagens por endereço (1ª contagem = a que vale para a meta) ----
+// Todas as contagens de locação que ainda estão na planilha: [[loc, id, recebido, conferente]].
+function _endLogDeContagens() {
+  var vals = _aba(ABA_CONTAGENS, CAB_CONTAGENS).getDataRange().getValues();
+  var iLoc = CAB_CONTAGENS.indexOf('locacao'), iRec = CAB_CONTAGENS.indexOf('recebido_em'),
+      iCat = CAB_CONTAGENS.indexOf('categoria'), iNome = CAB_CONTAGENS.indexOf('nome'),
+      iConf = CAB_CONTAGENS.indexOf('conferente'), out = [];
+  for (var i = 1; i < vals.length; i++) {
+    var r = vals[i];
+    if (String(r[iCat]) !== 'locacao') continue;
+    var loc = _enderecoDaContagem(r[iLoc], r[iNome]);
+    if (loc) out.push([loc, String(r[0]), _iso(r[iRec]), String(r[iConf] || '')]);
+  }
+  return out;
+}
+function _endLogEscrever(sh, linhas) {
+  if (!linhas.length) return;
+  var r0 = sh.getLastRow() + 1;
+  sh.getRange(r0, 1, linhas.length, CAB_END_LOG.length).setNumberFormat('@');
+  sh.getRange(r0, 1, linhas.length, CAB_END_LOG.length).setValues(linhas);
+}
+// 1ª vez (aba vazia): semeia com as contagens que ainda existem.
+function _endLogSemearSemLock() {
+  var sh = _aba(ABA_END_LOG, CAB_END_LOG);
+  if (sh.getLastRow() > 1) return;
+  _endLogEscrever(sh, _endLogDeContagens());
+}
+// Registra uma contagem de endereço. Reenvio da mesma contagem não repete
+// (fica a data do 1º envio). Quem chama já está com o lock.
+function _endLogRegistrar(loc, contagemId, recebido, conferente) {
+  var sh = _aba(ABA_END_LOG, CAB_END_LOG);
+  if (sh.getLastRow() < 2) _endLogSemearSemLock();   // a contagem atual já está na planilha: entra junto
+  var v = sh.getDataRange().getValues();
+  for (var i = 1; i < v.length; i++) if (String(v[i][1]) === contagemId) return false;
+  _endLogEscrever(sh, [[loc, contagemId, recebido, conferente]]);
+  return true;
+}
+function _endLogTirar(id) {
+  var sh = _aba(ABA_END_LOG, CAB_END_LOG), v = sh.getDataRange().getValues();
+  if (v.length < 2) return;
+  var fica = v.slice(1).filter(function (r) { return String(r[1]) !== id; });
+  if (fica.length === v.length - 1) return;
+  sh.getRange(2, 1, v.length - 1, CAB_END_LOG.length).clearContent();
+  if (fica.length) sh.getRange(2, 1, fica.length, CAB_END_LOG.length).setValues(fica);
+}
+// {loc: {primeira_em, n}} — a 1ª contagem de cada endereço e quantas ele já teve.
+function _endLogResumo() {
+  var sh = _aba(ABA_END_LOG, CAB_END_LOG), v = sh.getDataRange().getValues();
+  if (v.length < 2) {
+    var lk = LockService.getScriptLock();
+    if (lk.tryLock(10000)) { try { _endLogSemearSemLock(); } finally { lk.releaseLock(); } }
+    v = sh.getDataRange().getValues();
+  }
+  var res = {};
+  for (var i = 1; i < v.length; i++) {
+    var loc = String(v[i][0]), t = _iso(v[i][2]);
+    if (!loc) continue;
+    if (!res[loc]) res[loc] = {primeira_em: t, n: 0};
+    res[loc].n++;
+    if (t && (!res[loc].primeira_em || t < res[loc].primeira_em)) res[loc].primeira_em = t;
+  }
+  return res;
+}
 // Tira do mapa as linhas de uma contagem; devolve os endereços afetados.
 function _endTirarContagem(id) {
   var v = _aba(ABA_END, CAB_END).getDataRange().getValues(), locs = {};
@@ -971,7 +1043,14 @@ function _endMapa() {
                             loc_certo: String(v[i][8] || '')});
     }
   }
-  return Object.keys(porLoc).map(function (l) { return porLoc[l]; });
+  // primeira_em = data da 1ª contagem (a que vale para a meta); contagens = quantas já teve
+  var log = _endLogResumo();
+  return Object.keys(porLoc).map(function (l) {
+    var g = log[l] || {};
+    porLoc[l].primeira_em = g.primeira_em || porLoc[l].recebido_em;
+    porLoc[l].contagens = g.n || 1;
+    return porLoc[l];
+  });
 }
 function _uploadEnderecos(body) {
   if (!_ehAdmin(body)) return _json({ok: false, erro: 'não autorizado'});
