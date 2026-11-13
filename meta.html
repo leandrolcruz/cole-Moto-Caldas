@@ -4,93 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Meta da contagem · Moto Caldas</title>
-<style>
-  :root{--bg:#0f1117;--card:#181b25;--bd:#2a2e42;--tx:#e8eaf2;--tx2:#a0a6bd;--tx3:#6b7089;
-        --gn:#2dc653;--bl:#4895ef;--or:#f77f00;--dg:#e63946}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:1000px;margin:0 auto}
-  h1{font-size:20px}h2{font-size:15px;margin:18px 0 6px}
-  .sub{color:var(--tx3);font-size:12px;margin-bottom:10px}
-  .topo{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:14px}
-  .topo b{font-size:54px;line-height:1;font-variant-numeric:tabular-nums}
-  .topo span{color:var(--tx2);font-size:15px}
-  .barra{height:18px;border-radius:9px;background:var(--bd);overflow:hidden;margin:10px 0 4px}
-  .barra i{display:block;height:100%;background:var(--gn);border-radius:9px}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
-  .kpi{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:center}
-  .kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.kpi span{font-size:11px;color:var(--tx3)}
-  .kpi small{display:block;font-size:10px;color:var(--tx3);margin-top:2px}
-  .nota{font-size:13px;color:var(--tx2);background:rgba(72,149,239,.07);border-left:3px solid var(--bl);padding:8px 10px;border-radius:6px;margin:8px 0}
-  .sems{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px}
-  .sem{flex:1;min-width:64px;text-align:center;font-size:11px;color:var(--tx3)}
-  .sem .n{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
-  .sem .tr{position:relative;height:120px;margin:4px 0;border:1px solid var(--bd);border-radius:6px;background:var(--card);overflow:hidden}
-  .sem .tr i{position:absolute;left:0;right:0;bottom:0;background:var(--tx3)}
-  .sem .tr u{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--tx)}
-  .sem.s-ok .tr i{background:var(--gn)}.sem.s-nao .tr i{background:var(--dg)}.sem.s-at .tr i{background:var(--bl)}
-  .sem.s-at .tr{border-color:var(--bl)}.sem.s-fu{opacity:.6}
-  .sem b{display:block;color:var(--tx)}.sem small{display:block;font-size:10px}
-  .col{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:8px}
-  .col.ok{border-color:var(--gn)}
-  .col h3{font-size:16px;display:flex;justify-content:space-between;gap:8px}
-  .col h3 span{font-size:13px;color:var(--tx2);font-weight:400}
-  .ends{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-  .ends span{font-family:ui-monospace,Menlo,monospace;font-size:13px;border:1px solid var(--bd);border-radius:5px;padding:2px 7px}
-  .rolar{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--tx3);font-size:11px}
-  .rc{display:inline-block;border:1px solid var(--bd);border-radius:5px;padding:1px 6px;margin:1px 0;font-size:12px;white-space:nowrap}
-  .rc.ok{border-color:var(--gn);color:var(--gn)}
-  footer{color:var(--tx3);font-size:11px;margin-top:18px}
-  @media print{:root{--bg:#fff;--card:#fff;--bd:#bbb;--tx:#000;--tx2:#333;--tx3:#555}body{padding:0}.sem.s-fu{opacity:1}footer{display:none}
-    .barra i,.sem .tr i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-</style>
+<meta http-equiv="refresh" content="0; url=https://tarefas-mc.pages.dev/inventario/meta">
+<title>A meta da contagem · Moto Caldas</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#F4F4F6;color:#2D2D2D;padding:40px 20px;text-align:center}a{color:#CC0000;font-weight:700}</style>
 </head>
 <body>
-<h1>📍 Meta da contagem do estoque</h1>
-<p class="sub">Endereço contado = contado, organizado, limpo e com as peças no lugar. Para a meta vale a 1ª contagem de cada endereço.</p>
-<div id="app"><div class="nota">carregando…</div></div>
-<footer id="rodape"></footer>
-<script src="meta-locacao.js"></script>
-<script>
-var API='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
-var TOKEN='mc-inv-2026';
-var RE_END=/^\d{2}[A-Z]\d{2}[A-Z]?$/;
-function montar(j){
-  var cont={},locs=[];
-  (j.contados||[]).forEach(function(c){cont[String(c.loc).toUpperCase()]=c});
-  (j.universo||[]).forEach(function(l){l=String(l).toUpperCase();if(RE_END.test(l))locs.push(l)});
-  locs.sort();
-  var feitos=locs.filter(function(l){return cont[l]});
-  return {locs:locs,feitos:feitos,cont:cont,faltam:locs.length-feitos.length};
-}
-function render(j){
-  var r=montar(j),nT=r.locs.length,nF=r.feitos.length,p=nT?100*nF/nT:0,app=document.getElementById('app');
-  if(!nT){app.innerHTML='<div class="nota">Ainda não há a lista de endereços. Ela sobe sozinha de manhã.</div>';return}
-  var h='<div class="topo"><b>'+p.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%</b><span>'+cobN(nF)+' de '+cobN(nT)+' endereços contados · faltam '+cobN(r.faltam)+'</span></div>'+
-    '<div class="barra"><i style="width:'+p.toFixed(1)+'%"></i></div>'+htmlCobMeta(r);
-  var ss=cobSemanas(r),s=cobSemanaAtual(ss);
-  if(s&&r.faltam){
-    var cols=cobRotaCols(r,s.rota);
-    h+='<h2>🗺️ Roteiro da semana '+s.n+' ('+cobDM(s.seg)+' a '+cobDM(s.sex)+') — '+s.rotaOk+' de '+s.alvo+' feitos</h2>'+
-      '<p class="sub">Os endereços abaixo são os que faltam contar em cada coluna. Coluna verde = pronta.</p>';
-    cols.forEach(function(c){
-      h+='<div class="col'+(c.ok===c.tot?' ok':'')+'"><h3>'+(c.ok===c.tot?'✅ ':'')+'Coluna '+c.k+'<span>'+c.ok+' de '+c.tot+'</span></h3>'+
-        (c.falta.length?'<div class="ends">'+c.falta.map(function(l){return '<span>'+l+'</span>'}).join('')+'</div>':'')+'</div>';
-    });
-    h+='<h2>📅 As 10 semanas</h2>'+htmlCobRoteiro(r);
-  }
-  app.innerHTML=h;
-  document.getElementById('rodape').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'. Atualiza sozinho a cada 5 minutos; a contagem aparece depois de enviada pela coletora (☁️ Enviar).';
-}
-function carregar(){
-  fetch(API+'?action=getCobertura&token='+encodeURIComponent(TOKEN),{cache:'no-store'}).then(function(x){return x.json()}).then(function(j){
-    if(!j||!j.ok)throw new Error((j&&j.erro)||'resposta inválida');render(j);
-  }).catch(function(e){
-    if(!document.querySelector('.topo'))document.getElementById('app').innerHTML='<div class="nota">Não consegui carregar ('+String(e.message||e).replace(/[<>&]/g,'')+'). Tentando de novo em 5 minutos.</div>';
-  });
-}
-carregar();setInterval(carregar,5*60*1000);
-</script>
+<!-- Desde 13/11/26 o inventário mora na agenda (tarefas-mc.pages.dev). Esta página só redireciona. -->
+<h2>A meta da contagem mudou de endereço</h2>
+<p>Agora fica dentro da agenda: <a href="https://tarefas-mc.pages.dev/inventario/meta">https://tarefas-mc.pages.dev/inventario/meta</a></p>
+<script>location.replace("https://tarefas-mc.pages.dev/inventario/meta");</script>
 </body>
 </html>

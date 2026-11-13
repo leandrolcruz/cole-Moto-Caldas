@@ -1,5 +1,13 @@
 # Inventário Q900 - Moto Caldas Ltda
 
+> **13/11/2026 — o inventário foi para dentro da agenda.** Os dados saíram da planilha/Apps Script
+> (`backend/`, mantido só como histórico) e foram para o Supabase da agenda (função `inv_api`; migração em
+> `moto-caldas-agenda/supabase/migrations/20261113_inventario.sql`). O painel, "Onde está o capacete?" e a
+> meta da locação ficam em https://tarefas-mc.pages.dev (pasta `frontend/inventario/` daquele repo);
+> `dashboard.html`, `prateleiras.html` e `meta.html` daqui só redirecionam. Este repo continua sendo o
+> **app da coletora** (`index.html`), que envia as contagens direto para o banco da agenda.
+
+
 Sistema de inventário para coletor de código de barras NETUM Q900, desenvolvido para a **Moto Caldas Ltda** (Caldas Novas/GO).
 
 Integra com o **Microwork Cloud DMS**.

@@ -1,4 +1,4 @@
-var CACHE_NAME = 'inv-motocaldas-v32';
+var CACHE_NAME = 'inv-motocaldas-v33';
 var urlsToCache = [
   './',
   './index.html',
@@ -31,8 +31,10 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('fetch', function(event) {
   // API do Apps Script: NUNCA interceptar — resposta transiente cacheada envenena
   // o login/dados ("Falha ao falar com o backend" persistente)
+  // (idem o backend novo, no Supabase)
   if (event.request.url.indexOf('script.google') !== -1 ||
-      event.request.url.indexOf('googleusercontent') !== -1) {
+      event.request.url.indexOf('googleusercontent') !== -1 ||
+      event.request.url.indexOf('supabase.co') !== -1) {
     return;
   }
   // Catálogo embutido e dashboard: sempre da rede (dashboard é ferramenta de PC

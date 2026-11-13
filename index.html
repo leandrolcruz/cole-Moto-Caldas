@@ -207,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v32</b> (12/11/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v33</b> (13/11/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -2020,9 +2020,22 @@ function autoAtualizarCatalogo(forcar){
 }
 setTimeout(autoAtualizarCatalogo,3000);
 
-// ===== ENVIO PRO DASHBOARD (backend Apps Script do inventário) =====
-var INV_API_URL='https://script.google.com/macros/s/AKfycbyopg7jYsO7CAYA39UJ16R8PWRVkWspqczt17pzwllz1RUR_o7KC2D7lacMeuI7y_fzbA/exec';
+// ===== ENVIO PRO DASHBOARD =====
+// Desde 13/11/26 o inventário mora no banco da agenda (Supabase, função inv_api);
+// o painel fica em tarefas-mc.pages.dev (menu Inventário). A chave abaixo é pública:
+// com o token a coletora só envia contagem e lê base.
+var INV_API_URL='https://ufntijnmhflaliuxudxc.supabase.co/rest/v1/rpc/inv_api';
+var INV_SB_KEY='sb_publishable_KDQPwYtWb_-HuuQ7vBsswQ_84n4z7xt';
 var INV_TOKEN='mc-inv-2026';
+// Mesma chamada de antes (POST com corpo, ou "?action=..." na URL), no formato do backend novo.
+function invFetch(url,opt){
+  var body={},q=url.indexOf('?');
+  if(q>=0)new URLSearchParams(url.slice(q+1)).forEach(function(v,k){body[k]=v});
+  if(opt&&opt.body){try{body=JSON.parse(opt.body)}catch(e){}}
+  return fetch(INV_API_URL,{method:'POST',cache:'no-store',
+    headers:{'apikey':INV_SB_KEY,'Authorization':'Bearer '+INV_SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({body:body})});
+}
 // Categoria do que foi contado — os modos Locação, Tipo, Capacetes e Prateleira
 // são todos modo 'locacao' e só se distinguem pelas flags (o dashboard separa por isto)
 function _categoriaContagem(c){
@@ -2050,7 +2063,7 @@ function enviarContagem(){
   var body=_payloadContagem(c);
   if(!body){toast('Contagem vazia');return}
   toast('☁️ Enviando '+body.contagem.itens.length+' itens'+(body.contagem.fab.length?' + '+body.contagem.fab.length+' fabricante':'')+'...');
-  fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+  invFetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
   .then(function(r){return r.json()}).then(function(j){
     if(j&&j.ok){c.enviadaEm=now();saveDB();toast('☁️ Enviada! '+j.itens+' itens'+(j.divergencias?' · '+j.divergencias+' divergências':''))}
     else{toast('Falha no envio: '+((j&&j.erro)||'?'))}
@@ -2080,7 +2093,7 @@ function enviarTodasPrateleiras(){
     var body=_payloadContagem(c);
     if(!body){prox();return}
     toast('☁️ Enviando '+c.locacao+' ('+idx+'/'+cs.length+')...');
-    fetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+    invFetch(INV_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
     .then(function(r){return r.json()}).then(function(j){if(j&&j.ok){c.enviadaEm=now();ok++}else{falha++}prox()})
     .catch(function(){falha++;prox()});
   }
@@ -2105,7 +2118,7 @@ var _escolherTipo='';
 // (o contador troca pelo botão "Escolher base"). Newest NÃO é mais forçado.
 function aoAbrirModo(tipo,jaTemBase){
   if(!INV_API_URL||!navigator.onLine)return;
-  fetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
+  invFetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
   .then(function(r){return r.json()}).then(function(j){
     var vs=(j.ok&&j.versoes)||[];
     if(!vs.length){if(!jaTemBase)buscarBaseRemota(tipo);return}
@@ -2118,7 +2131,7 @@ function aoAbrirModo(tipo,jaTemBase){
 function escolherBase(tipo){
   if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
   toast('☁️ Buscando histórico...');
-  fetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
+  invFetch(INV_API_URL+'?action=getBasesHist&tipo='+tipo+'&token='+encodeURIComponent(INV_TOKEN))
   .then(function(r){return r.json()}).then(function(j){abrirEscolhaBase(tipo,(j.ok&&j.versoes)||[])})
   .catch(function(){toast('Falha ao buscar histórico')});
 }
@@ -2144,7 +2157,7 @@ function buscarBaseRemota(tipo,versao){
   if(!INV_API_URL){toast('Backend não configurado');return}
   if(!navigator.onLine){toast('Sem internet — conecte o Wi-Fi primeiro');return}
   toast('☁️ Buscando base...');
-  fetch(INV_API_URL+'?action=getBase&tipo='+tipo+(versao?'&versao='+encodeURIComponent(versao):'')+'&token='+encodeURIComponent(INV_TOKEN))
+  invFetch(INV_API_URL+'?action=getBase&tipo='+tipo+(versao?'&versao='+encodeURIComponent(versao):'')+'&token='+encodeURIComponent(INV_TOKEN))
   .then(function(r){return r.json()}).then(function(j){
     if(!j.ok){toast('Falha: '+(j.erro||'?'));return}
     if(!j.pecas||!j.pecas.length){toast('Nenhuma base de '+(tipo==='diaria'?'contagem diária':'locação')+' no dashboard ainda — suba a planilha lá primeiro');return}
