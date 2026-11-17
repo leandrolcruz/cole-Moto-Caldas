@@ -207,7 +207,7 @@
     <div class="home-hero">
       <div class="logo">📦</div>
       <h2><span>MOTO CALDAS LTDA</span></h2>
-      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v33</b> (13/11/26)</p>
+      <p style="color:var(--tx3);font-size:11px;margin-top:3px">Sistema de Inventário · <b style="color:var(--ac)">v34</b> (13/11/26)</p>
       <p style="color:var(--tx3);font-size:11px;margin-top:6px;font-style:italic">Desenvolvido por Leandro Leite</p>
     </div>
     <div class="mode-cards">
@@ -216,7 +216,7 @@
       <div class="mode-card c-bl" onclick="abrirLocacao()"><div class="ci">📍</div><div class="mc-text"><h3>Contagem por Locação</h3><p>Base vem do dashboard. Conte por corredor, estante e prateleira.</p></div></div>
       <div class="mode-card c-gn" onclick="abrirTipo()"><div class="ci">🏷️</div><div class="mc-text"><h3>Contagem por Tipo</h3><p>Base vem do dashboard. Conte por tipo de mercadoria (capacetes, pneus, boutique...).</p></div></div>
             <div class="mode-card c-red" onclick="abrirCapacetes()"><div class="ci">🪖</div><div class="mc-text"><h3>Contagem de Capacetes</h3><p>Base vem do dashboard (todos os capacetes, com e sem saldo). Ajuda a AGRUPAR: código repetido fora de hora = capacete no lugar errado.</p></div></div>
-      <div class="mode-card c-or" onclick="abrirPrateleira()"><div class="ci">🗄️</div><div class="mc-text"><h3>Capacetes por Prateleira</h3><p>Usa a base dos capacetes. Escolha a prateleira (1–18) ou a Exposição e bipe o que está nela — o dashboard mostra o mapa de cada uma.</p></div></div>
+      <div class="mode-card c-or" onclick="abrirPrateleira()"><div class="ci">🗄️</div><div class="mc-text"><h3>Capacetes por Prateleira</h3><p>Usa a base dos capacetes. Escolha a prateleira (1–18), a Exposição ou Defeito e bipe o que está nela — o dashboard mostra o mapa de cada uma.</p></div></div>
       <div class="mode-card c-pp" onclick="abrirRoupas()"><div class="ci">👕</div><div class="mc-text"><h3>Contagem de Roupas</h3><p>Bipe o código e registre cor e tamanho. Duas contagens com conferente.</p></div></div>
     </div>
     <div id="resumoGeral"></div>
@@ -607,7 +607,7 @@ function popularContadores(){
   for(var i=0;i<sels.length;i++){var h='<option value="">Selecione...</option>';for(var j=0;j<CONTADORES.length;j++)h+='<option value="'+CONTADORES[j]+'">'+CONTADORES[j]+'</option>';sels[i].innerHTML=h;sels[i].value=u}
 }
 var TK='inv_q900_tipo_base',CK='inv_q900_cap_base',CKM='inv_q900_cap_base_meta',tmpCapCod='',locModoAtual='locacao';
-var PRATELEIRAS=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');return a})();
+var PRATELEIRAS=(function(){var a=[];for(var i=1;i<=18;i++)a.push('Prateleira '+i);a.push('Exposição');a.push('Defeito');return a})();
 var _prateleiraPendente=false;
 var db=loadDB(),base=loadBase(),cur=null,timer=null,tmpDiaria=[],locBase=loadLocBase(),tmpLoc=[];
 var ultimoBipe=null,locAtual='',tmpOutraCod='',codDiariaAtual='',delIdx=-1,pendingLoc='',pendingNum=0,tmpLocWb=null,tmpLocBytes=null;
@@ -1289,7 +1289,7 @@ function _renderLocBaseCard(){
   var el=document.getElementById('locBaseAtual');
   if(locBase&&locBase.pecas){
     var np=Object.keys(locBase.pecas).length,nl=Object.keys(locBase.locacoes||{}).length;
-    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+(locModoAtual==='prateleira'?' capacetes • 18 prateleiras + Exposição':' peças • '+nl+' '+(locModoAtual==='tipo'?'tipos':locModoAtual==='capacetes'?'grupo':'locações'))+'</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="limparBaseLoc()">Limpar</button></div></div>';
+    el.innerHTML='<div class="stitle">Base carregada</div><div class="c-item"><div class="c-info"><h4>'+np+(locModoAtual==='prateleira'?' capacetes • 18 prateleiras + Exposição + Defeito':' peças • '+nl+' '+(locModoAtual==='tipo'?'tipos':locModoAtual==='capacetes'?'grupo':'locações'))+'</h4><p>Toque em "Contar" para usar esta base</p></div><div class="c-meta" style="display:flex;gap:6px"><button class="btn btn-sm btn-bl" onclick="iniciarSelLoc()">Contar</button><button class="btn btn-sm btn-dg" onclick="limparBaseLoc()">Limpar</button></div></div>';
   }else{el.innerHTML=''}
 }
 
@@ -1350,7 +1350,7 @@ function iniciarSelLoc(){
   if(!locBase||!locBase.locacoes){toast('Carregue a base primeiro');return}
   document.getElementById('locSelTit').textContent=locModoAtual==='prateleira'?'Prateleiras':locModoAtual==='capacetes'?'Capacetes':locModoAtual==='tipo'?'Escolher Tipo':'Escolher Locação';
   show('scrLocSel');
-  document.getElementById('locSelSub').textContent=locModoAtual==='prateleira'?(Object.keys(locBase.pecas).length+' capacetes na base • escolha a prateleira ou a Exposição'):(Object.keys(locBase.pecas).length+' peças • '+Object.keys(locBase.locacoes).length+' locações');
+  document.getElementById('locSelSub').textContent=locModoAtual==='prateleira'?(Object.keys(locBase.pecas).length+' capacetes na base • escolha a prateleira, a Exposição ou Defeito'):(Object.keys(locBase.pecas).length+' peças • '+Object.keys(locBase.locacoes).length+' locações');
   document.getElementById('locSearchInput').value='';renderLocGroups('');
 }
 function extrairGrupo(loc){
@@ -1395,7 +1395,7 @@ function renderPrateleiras(filtro){
     var statusTxt=(nOk?nOk+' contagem'+(nOk>1?'ns':'')+' concluída'+(nOk>1?'s':''):'')+(emAnd?(nOk?' • ':'')+'🔄 em andamento':'')||'ainda não contada';
     var progColor=nOk?'var(--gn)':emAnd?'var(--or)':'var(--bd2)';var pct=nOk?100:(emAnd?50:0);
     var borderLeft=(nOk||emAnd)?'border-left:3px solid '+(nOk?'var(--gn)':'var(--or)'):'';
-    var icon=loc==='Exposição'?'🛍️':'🗄️';
+    var icon=loc==='Exposição'?'🛍️':loc==='Defeito'?'⚠️':'🗄️';
     h+='<div class="loc-sub-item" onclick="pedirConferente(\''+loc.replace(/'/g,"\\'")+'\')" style="'+borderLeft+'"><div style="flex:1"><div class="loc-name">'+icon+' '+loc+'</div><div class="loc-info">'+statusTxt+(bipes?' • '+bipes+' bipes':'')+'</div></div><div class="loc-prog"><div style="font-size:11px;color:'+progColor+'">'+Math.round(pct)+'%</div><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+progColor+'"></div></div></div></div>';
   }
   if(!h)h='<div class="empty-msg">Nenhuma prateleira encontrada.</div>';
@@ -1498,7 +1498,7 @@ function abrirContLoc(loc,numCont,conferente){
 
 function abrirContLocTela(){
   var c=db.c[cur];show('scrLocCont');
-  document.getElementById('locContTit').textContent=(c.porPrateleira?(c.locacao==='Exposição'?'🛍️ ':'🗄️ '):c.porCapacete?'🪖 ':'📍 ')+c.locacao;
+  document.getElementById('locContTit').textContent=(c.porPrateleira?(c.locacao==='Exposição'?'🛍️ ':c.locacao==='Defeito'?'⚠️ ':'🗄️ '):c.porCapacete?'🪖 ':'📍 ')+c.locacao;
   document.getElementById('locContSub').textContent=c.numContagem+'ª contagem • '+c.conferente;
   hideLocAlerts();renderLocCont();
   var inp=document.getElementById('scanLoc');inp.value='';setTimeout(function(){safeFocus(inp)},200);
